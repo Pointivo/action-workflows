@@ -1,0 +1,217 @@
+name: Reusable - Build Release
+
+on:
+  workflow_call:
+    inputs:
+      imageName:
+        required: true
+        type: string
+      semverFile:
+        required: true
+        type: string
+      cachedStages:
+        required: true
+        type: string
+      pullImages:
+        required: true
+        type: string
+      extraBuildArgs:
+        required: true
+        type: string
+      testPath:
+        required: true
+        type: string
+      buildStatusPath:
+        required: true
+        type: string
+      releaseTag:
+        required: true
+        type: string
+      changeLogFile:
+        required: true
+        type: string
+
+    secrets:
+      aws-access-key-id:
+        required: true
+      aws-secret-access-key:
+        required: true
+      ecr-registry:
+        required: true
+      github-token:
+        required: true
+
+
+jobs:
+  build-and-test:
+    name: "Build and Test"
+    runs-on: [ self-hosted ]
+    outputs:
+      imageTag: ${{ steps.build.outputs.imageTag }}
+      appVersion: ${{ steps.version.outputs.appVersion }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
+
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
+      - name: Bump (Patch) version
+        id: version
+        run: |
+          EXISTING_VERSION=$(bash version.sh -g)
+          echo "Existing Version: ${EXISTING_VERSION}"
+          bash version.sh -b patch
+          APP_VERSION=$(bash version.sh -g)
+          echo "PATCHED Version: ${APP_VERSION}"
+          echo "::set-output name=appVersion::$APP_VERSION"
+
+      - name: Build Docker image
+        id: build
+        uses: pointivo/action-build@v2
+        with:
+          imageName: ${{ inputs.imageName }}
+          semverFile: ${{ inputs.semverFile }}
+          cachedStages: ${{ inputs.cachedStages }}
+          pullImages: ${{ inputs.pullImages }}
+          extraBuildArgs: ${{ inputs.extraBuildArgs }}
+          testPath: ${{ inputs.testPath }}
+          buildStatusPath: ${{ inputs.buildStatusPath }}
+          releaseTag: ${{ inputs.releaseTag }}
+
+      - name: Upload Unit Test Results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: unit-tests-artifacts
+          path: build/artifacts/
+          if-no-files-found: warn
+
+  publish-test-results:
+    name: "Publish Unit Tests Results"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: success() || failure()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: unit-tests-artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        with:
+          files: |
+            *.xml
+            ./**/*.xml
+
+  publish-to-ecr:
+    name: "Publish Image to ECR"
+    needs: build-and-test
+    runs-on: self-hosted
+    if: success()
+    outputs:
+      repository: ${{ steps.push.outputs.repository }}
+      imageTag: ${{ steps.push.outputs.imageTag }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Tag and push images to ECR
+        id: push
+        env:
+          REGISTRY: ${{ secrets.ecr-registry }}
+          REPOSITORY: ${{ inputs.imageName }}
+          IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
+        run: |
+          echo REGISTRY=$REGISTRY
+          echo REPOSITORY=$REPOSITORY
+          echo IMAGE_TAG=$IMAGE_TAG
+          echo "::set-output name=repository::$REPOSITORY"
+          echo "::set-output name=imageTag::$IMAGE_TAG"
+
+          # Publish to ECR
+          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+
+  cleanup:
+    name: "Cleanup docker resources"
+    needs: [publish-to-ecr, build-and-test]
+    runs-on: self-hosted
+    if: success() || failure()
+
+    steps:
+      - name: Cleanup
+        uses: pointivo/action-cleanup@v1
+        env:
+          IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
+
+  create-new-release:
+    name: "Create Patch release"
+    runs-on: ubuntu-latest
+    needs: [ build-and-test, publish-to-ecr ]
+    container:
+      image: ghcr.io/pointivo/devops-docker
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Get/Set Release Version
+        run: |
+          RELEASE_VERSION="${{ needs.build-and-test.outputs.appVersion }}"
+          echo "Release version will be ${RELEASE_VERSION}"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_ENV
+          RELEASE_SHORT=$(echo "${RELEASE_VERSION}" | awk 'BEGIN {FS=".";OFS="."} { print $1,$2 }')
+          echo "RELEASE_SHORT=${RELEASE_SHORT}" >> $GITHUB_ENV
+          bash version.sh -s $RELEASE_VERSION
+
+      - name: Update changelog
+        uses: thomaseizinger/keep-a-changelog-new-release@1.2.1
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          changelogPath: ${{ inputs.changelogFile }}
+
+      - name: Initialize mandatory git config
+        run: |
+          git config user.name "GitHub actions"
+          git config user.email noreply@github.com
+
+      - name: Commit changelog and manifest files
+        id: make-commit
+        run: |
+          git add ${{ inputs.changelogFile }}
+          git add $(bash version.sh -p)
+          git commit --message "Create patch release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
+          echo "::set-output name=commit::$(git rev-parse HEAD)"
+          git push origin ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }}
+
+      - name: Extract Latest changes from Changelog File
+        run: |
+          sed -n '/## \[${{ env.RELEASE_VERSION }}\]/,/## \[/p' ${{ inputs.changelogFile }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
+
+      - name: Publish Patch Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.github-token }}
+        with:
+          commitish: ${{ steps.make-commit.outputs.commit }}
+          tag_name: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
+          release_name: ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}
+          draft: false
+          prerelease: false
+          body_path: CHANGELOG_RELEASE.md
