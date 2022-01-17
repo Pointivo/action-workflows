@@ -34,6 +34,12 @@ on:
         required: true
         type: string
       # Not Required
+      buildStage:
+        required: false
+        type: string
+      releaseStage:
+        required: false
+        type: string
       dockerfileDirectory:
         required: false
         type: string
@@ -104,6 +110,10 @@ jobs:
           testPath: ${{ inputs.testPath }}
           buildStatusPath: ${{ inputs.buildStatusPath }}
           releaseTag: ${{ inputs.releaseTag }}
+          buildStage: ${{ inputs.buildStage }}
+          releaseStage: ${{ inputs.releaseStage }}
+          dockerfileDirectory: $${{ inputs.dockerfileDirectory }}
+          dockerfileName: $${{ inputs.dockerfileName }}
 
       - name: Upload Unit Test Results
         if: always()
