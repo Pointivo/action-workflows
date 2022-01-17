@@ -74,6 +74,8 @@ jobs:
 
       - name: Bump (Patch) version
         id: version
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
         run: |
           EXISTING_VERSION=$(bash version.sh -g)
           echo "Existing Version: ${EXISTING_VERSION}"
@@ -107,8 +109,8 @@ jobs:
           releaseTag: ${{ inputs.releaseTag }}
           buildStage: ${{ inputs.buildStage }}
           releaseStage: ${{ inputs.releaseStage }}
-          dockerfileDirectory: $${{ inputs.dockerfileDirectory }}
-          dockerfileName: $${{ inputs.dockerfileName }}
+          dockerfileDirectory: ${{ inputs.dockerfileDirectory }}
+          dockerfileName: ${{ inputs.dockerfileName }}
 
       - name: Upload Unit Test Results
         if: always()
@@ -202,6 +204,8 @@ jobs:
           fetch-depth: 1
 
       - name: Get/Set Release Version
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
         run: |
           RELEASE_VERSION="${{ needs.build-and-test.outputs.appVersion }}"
           echo "Release version will be ${RELEASE_VERSION}"
@@ -223,6 +227,8 @@ jobs:
 
       - name: Commit changelog and manifest files
         id: make-commit
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
         run: |
           git add ${{ inputs.changelogFile }}
           git add $(bash version.sh -p)
