@@ -276,7 +276,7 @@ jobs:
         uses: thomaseizinger/keep-a-changelog-new-release@1.2.1
         with:
           version: ${{ env.RELEASE_VERSION }}
-          changelogPath: ${{ ${{ inputs.changelogFile }} }}
+          changelogPath: ${{ inputs.changelogFile }}
 
       - name: Initialize mandatory git config
         run: |
@@ -291,7 +291,7 @@ jobs:
       - name: Commit changelog and manifest files
         id: make-commit
         run: |
-          git add ${{ ${{ inputs.changelogFile }} }}
+          git add ${{ inputs.changelogFile }}
           git add $(bash version.sh -p)
           git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
           git push origin ${{ github.event.repository.default_branch }}
@@ -299,7 +299,7 @@ jobs:
 
       - name: Extract Changelog
         run: |
-          sed -n '/## \[${{ env.RELEASE_VERSION }}\]/,/## \[/p' ${{ ${{ inputs.changelogFile }} }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
+          sed -n '/## \[${{ env.RELEASE_VERSION }}\]/,/## \[/p' ${{ inputs.changelogFile }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
 
       - name: Create Release
         uses: actions/create-release@v1
