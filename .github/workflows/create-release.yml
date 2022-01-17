@@ -33,6 +33,13 @@ on:
       changeLogFile:
         required: true
         type: string
+      # Not Required
+      dockerfileDirectory:
+        required: false
+        type: string
+      dockerfileName:
+        required: false
+        type: string
       ecr-region:
         required: false
         type: string
@@ -57,7 +64,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Prepare build
+    name: "Prepare build"
     runs-on: [ self-hosted ]
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
@@ -73,6 +80,17 @@ jobs:
         if: ${{ inputs.releaseVersion }} != ''
         run: |
           bash version.sh -s ${{ inputs.releaseVersion }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: ${{ secrets.ecr-region }}
+
+      - name: Login to Amazon ECR for Pre-Pull Images
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build Docker image
         id: build
@@ -162,7 +180,7 @@ jobs:
           docker rmi --force $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
   deploy-to-k8s-master:
-    name: Deploy to K8s-Master
+    name: "Deploy to K8s-Master"
     needs: [ publish-to-ecr, create-new-release]
     runs-on: ubuntu-latest
     if: success()
@@ -201,7 +219,7 @@ jobs:
           args: -n master rollout status deployment/${{ env.POD_NAME }} --timeout=10m
 
   deploy-to-k8s-qa:
-    name: Deploy to K8s-QA
+    name: "Deploy to K8s-QA"
     needs: [ publish-to-ecr, create-new-release, deploy-to-k8s-master ]
     runs-on: ubuntu-latest
     if: success()
