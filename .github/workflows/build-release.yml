@@ -43,6 +43,10 @@ on:
       dockerfileName:
         required: false
         type: string
+      ecr-region:
+        required: true
+        type: string
+        default: us-east-1
 
     secrets:
       aws-access-key-id:
@@ -50,8 +54,6 @@ on:
       aws-secret-access-key:
         required: true
       ecr-registry:
-        required: true
-      ecr-region:
         required: true
       github-token:
         required: true
@@ -89,7 +91,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ secrets.ecr-region }}
+          aws-region: ${{ inputs.ecr-region }}
 
       - name: Login to Amazon ECR for Pre-Pull Images
         id: login-ecr
@@ -156,7 +158,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ secrets.ecr-region }}
+          aws-region: ${{ inputs.ecr-region }}
 
       - name: Login to Amazon ECR
         id: login-ecr

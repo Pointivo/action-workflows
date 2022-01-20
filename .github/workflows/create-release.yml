@@ -50,6 +50,10 @@ on:
         required: false
         type: string
         default: us-east-1
+      eks-region:
+        required: false
+        type: string
+        default: us-east-1
 
     secrets:
       aws-access-key-id:
@@ -57,8 +61,6 @@ on:
       aws-secret-access-key:
         required: true
       ecr-registry:
-        required: true
-      ecr-region:
         required: true
       github-token:
         required: true
@@ -94,7 +96,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ secrets.ecr-region }}
+          aws-region: ${{ inputs.ecr-region }}
 
       - name: Login to Amazon ECR for Pre-Pull Images
         id: login-ecr
@@ -161,7 +163,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ secrets.ecr-region }}
+          aws-region: ${{ inputs.ecr-region }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -217,7 +219,7 @@ jobs:
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ secrets.ecr-region }}
+          aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-master-cluster }}
           args: -n master set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
 
@@ -226,7 +228,7 @@ jobs:
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ secrets.ecr-region }}
+          aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-master-cluster }}
           args: -n master rollout status deployment/${{ env.POD_NAME }} --timeout=10m
 
@@ -256,7 +258,7 @@ jobs:
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ secrets.ecr-region }}
+          aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-qa-cluster }}
           args: -n qa set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
 
@@ -265,7 +267,7 @@ jobs:
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ secrets.ecr-region }}
+          aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-qa-cluster }}
           args: -n qa rollout status deployment/${{ env.POD_NAME }} --timeout=10m
 

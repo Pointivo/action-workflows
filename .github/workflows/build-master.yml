@@ -40,11 +40,11 @@ on:
       dockerfileName:
         required: false
         type: string
-      eks-region:
+      ecr-region:
         required: false
         type: string
         default: us-east-1
-      ecr-region:
+      eks-region:
         required: false
         type: string
         default: us-east-1
@@ -86,7 +86,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ secrets.ecr-region }}
+          aws-region: ${{ inputs.ecr-region }}
 
       - name: Login to Amazon ECR for Pre-Pull Images
         id: login-ecr
@@ -152,7 +152,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ secrets.ecr-region }}
+          aws-region: ${{ inputs.ecr-region }}
 
       - name: Login to Amazon ECR
         id: login-ecr
