@@ -66,7 +66,6 @@ on:
         required: true
 
 
-
 jobs:
   build-and-test:
     name: "Build and Test"
@@ -221,7 +220,7 @@ jobs:
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-cluster-name }}
-          args: -n ${{ secrets.eks-cluster-namespace }} set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
+          args: -n ${{ inputs.eks-cluster-namespace }} set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
 
       - name: Monitor Rollout
         uses: ianbelcher/eks-kubectl-action@master
@@ -230,5 +229,5 @@ jobs:
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-cluster-name }}
-          args: -n ${{ secrets.eks-cluster-namespace }} rollout status deployment/${{ env.POD_NAME }} --timeout=10m
+          args: -n ${{ inputs.eks-cluster-namespace }} rollout status deployment/${{ env.POD_NAME }} --timeout=10m
 
