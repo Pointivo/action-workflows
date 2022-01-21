@@ -34,6 +34,10 @@ on:
         required: true
         type: string
       # Not Required
+      skipPromotion:
+        required: false
+        type: boolean
+        default: false
       buildStage:
         required: false
         type: string
@@ -54,6 +58,7 @@ on:
         required: false
         type: string
         default: us-east-1
+
 
     secrets:
       aws-access-key-id:
@@ -236,7 +241,7 @@ jobs:
     name: "Deploy to K8s-QA"
     needs: [ publish-to-ecr, create-new-release, deploy-to-k8s-master ]
     runs-on: ubuntu-latest
-    if: success()
+    if: success() && (!github.event.inputs.skipPromotion || github.event.inputs.skipPromotion != 'false')
     steps:
       - name: Get Variables
         env:

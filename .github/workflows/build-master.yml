@@ -28,6 +28,10 @@ on:
         required: true
         type: string
       # Not Required
+      skipPromotion:
+        required: false
+        type: boolean
+        default: false
       buildStage:
         required: false
         type: string
@@ -198,7 +202,7 @@ jobs:
     name: "Deploy to K8s-Master"
     needs: publish-to-ecr
     runs-on: ubuntu-latest
-    if: success()
+    if: success() && (!github.event.inputs.skipPromotion || github.event.inputs.skipPromotion == 'false')
     steps:
       - name: Get Variables
         env:
