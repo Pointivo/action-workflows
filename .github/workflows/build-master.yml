@@ -136,6 +136,7 @@ jobs:
           files: |
             *.xml
             ./**/*.xml
+            !**_*cov.xml
 
   publish-to-ecr:
     name: "Publish Image to ECR"
