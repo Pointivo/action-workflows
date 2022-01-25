@@ -45,7 +45,7 @@ on:
         required: false
         type: string
       ecr-region:
-        required: true
+        required: false
         type: string
         default: us-east-1
 
