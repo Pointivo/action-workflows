@@ -24,9 +24,6 @@ on:
       buildStatusPath:
         required: true
         type: string
-      releaseTag:
-        required: true
-        type: string
       changeLogFile:
         required: true
         type: string
@@ -37,6 +34,10 @@ on:
       releaseStage:
         required: false
         type: string
+      releaseTag:
+        required: false
+        type: string
+        default: release
       dockerfileDirectory:
         required: false
         type: string

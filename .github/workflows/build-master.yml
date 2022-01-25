@@ -38,6 +38,10 @@ on:
       releaseStage:
         required: false
         type: string
+      releaseTag:
+        required: false
+        type: string
+        default: snapshot
       dockerfileDirectory:
         required: false
         type: string
@@ -106,6 +110,7 @@ jobs:
           extraBuildArgs: ${{ inputs.extraBuildArgs }}
           testPath: ${{ inputs.testPath }}
           buildStatusPath: ${{ inputs.buildStatusPath }}
+          releaseTag: ${{ inputs.releaseTag }}
           buildStage: ${{ inputs.buildStage }}
           releaseStage: ${{ inputs.releaseStage }}
           dockerfileDirectory: ${{ inputs.dockerfileDirectory }}
