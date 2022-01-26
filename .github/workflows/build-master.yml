@@ -201,6 +201,7 @@ jobs:
       - name: Cleanup
         uses: pointivo/action-cleanup@v1
         env:
+          IMAGE_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
 
   deploy-to-k8s-master:

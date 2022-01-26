@@ -198,6 +198,7 @@ jobs:
           docker push $REGISTRY/$REPOSITORY:qa
           docker rmi $REGISTRY/$REPOSITORY:qa
           
+          docker rmi $REPOSITORY:$IMAGE_TAG || true
           docker rmi --force $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
   deploy-to-k8s-master:
@@ -288,6 +289,7 @@ jobs:
       - name: Cleanup
         uses: pointivo/action-cleanup@v1
         env:
+          IMAGE_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
 
   create-new-release:
