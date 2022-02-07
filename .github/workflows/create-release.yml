@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       releaseVersion:
-        required: true
+        required: false
         type: string
       imageName:
         required: true
@@ -77,25 +77,111 @@ on:
 
 
 jobs:
+  create-new-release:
+    name: "Create a new release"
+    runs-on: ubuntu-latest
+    outputs:
+      releaseVersion: ${{ steps.version.outputs.releaseVersion }}
+      releaseCommit: ${{ steps.make-commit.outputs.releaseCommit }}
+    container:
+      image: ghcr.io/pointivo/devops-docker
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+
+      - name: Set Release Version
+        if: inputs.releaseVersion != ''
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
+        run: |
+          bash version.sh -s ${{ inputs.releaseVersion }}
+
+      - name: Get Release Version
+        id: version
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
+        run: |
+          RELEASE_VERSION=$(bash version.sh -g)
+          echo "Release version will be ${RELEASE_VERSION}"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_ENV
+          RELEASE_SHORT=$(echo "${RELEASE_VERSION}" | awk 'BEGIN {FS=".";OFS="."} { print $1,$2 }')
+          echo "RELEASE_SHORT=${RELEASE_SHORT}" >> $GITHUB_ENV
+          echo "::set-output name=releaseVersion::$RELEASE_VERSION"
+
+      - name: Update changelog
+        uses: thomaseizinger/keep-a-changelog-new-release@1.3.0
+        with:
+          version: ${{ env.RELEASE_VERSION }}
+          changelogPath: ${{ inputs.changelogFile }}
+          tag: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
+
+      - name: Initialize mandatory git config
+        run: |
+          git config user.name "GitHub actions"
+          git config user.email noreply@github.com
+
+      - name: Commit changelog and bump Master
+        id: make-commit
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
+        run: |
+          git add ${{ inputs.changelogFile }}
+          git add $(bash version.sh -p)
+          git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
+          echo "::set-output name=releaseCommit::$(git rev-parse HEAD)"
+          
+          # Bump minor version
+          bash version.sh -b minor
+          git add $(bash version.sh -p)
+          git commit --message "Bump Minor version after Release (v${RELEASED_VERSION})"
+          
+          # Single push
+          git push origin ${{ github.event.repository.default_branch }}
+
+      - name: Extract Changelog
+        run: |
+          sed -n '/## \[${{ env.RELEASE_VERSION }}\]/,/## \[/p' ${{ inputs.changelogFile }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.github-token }}
+        with:
+          commitish: ${{ steps.make-commit.outputs.releaseCommit }}
+          tag_name: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
+          release_name: v${{ env.RELEASE_VERSION }} - ${{ inputs.imageName }}
+          draft: false
+          prerelease: false
+          body_path: CHANGELOG_RELEASE.md
+
+      - name: Create release branch from tag
+        run: |
+          git fetch
+          git checkout -b ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }} ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
+          git push origin ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }}
+
   build-and-test:
     name: "Prepare build"
+    needs: create-new-release
     runs-on: [ self-hosted ]
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
       - uses: actions/checkout@v2
         with:
+          ref: ${{ needs.create-new-release.outputs.releaseCommit }}
           lfs: true
 
       - name: Checkout LFS objects
         run: git lfs checkout
 
       - name: Set Release Version
-        if: ${{ inputs.releaseVersion }} != ''
         env:
           SEMVER_FILE: ${{ inputs.semverFile }}
         run: |
-          bash version.sh -s ${{ inputs.releaseVersion }}
+          bash version.sh -s ${{ needs.create-new-release.outputs.releaseVersion }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -201,45 +287,6 @@ jobs:
           docker rmi $REPOSITORY:$IMAGE_TAG || true
           docker rmi --force $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-  deploy-to-k8s-master:
-    name: "Deploy to K8s-Master"
-    needs: [ publish-to-ecr, create-new-release]
-    runs-on: ubuntu-latest
-    if: success() && (!inputs.skipPromotion || inputs.skipPromotion == 'false')
-    steps:
-      - name: Get Variables
-        env:
-          REGISTRY: ${{ secrets.ecr-registry }}
-          REPOSITORY: ${{ inputs.imageName }}
-          POD_NAME: ${{ inputs.imageName }}
-          IMAGE_TAG: ${{ needs.publish-to-ecr.outputs.imageTag }}
-        run: |
-          echo REGISTRY=$REGISTRY
-          echo REPOSITORY=$REPOSITORY
-          echo IMAGE_TAG=$IMAGE_TAG
-          IMAGE_URL="${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}"
-          echo "IMAGE_URL=${IMAGE_URL}"
-          echo "IMAGE_URL=${IMAGE_URL}" >> $GITHUB_ENV
-          echo "POD_NAME=${POD_NAME}" >> $GITHUB_ENV
-
-      - name: Promote to Master
-        uses: ianbelcher/eks-kubectl-action@master
-        with:
-          aws_access_key_id: ${{ secrets.aws-access-key-id }}
-          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ inputs.eks-region }}
-          cluster_name: ${{ secrets.eks-master-cluster }}
-          args: -n master set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
-
-      - name: Monitor Rollout
-        uses: ianbelcher/eks-kubectl-action@master
-        with:
-          aws_access_key_id: ${{ secrets.aws-access-key-id }}
-          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ inputs.eks-region }}
-          cluster_name: ${{ secrets.eks-master-cluster }}
-          args: -n master rollout status deployment/${{ env.POD_NAME }} --timeout=10m
-
   deploy-to-k8s-qa:
     name: "Deploy to K8s-QA"
     needs: [ publish-to-ecr, create-new-release, deploy-to-k8s-master ]
@@ -291,72 +338,3 @@ jobs:
         env:
           IMAGE_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
-
-  create-new-release:
-    name: "Create a new release"
-    runs-on: ubuntu-latest
-    needs: publish-to-ecr
-    container:
-      image: ghcr.io/pointivo/devops-docker
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          fetch-depth: 1
-
-      - name: Set Release Version
-        env:
-          SEMVER_FILE: ${{ inputs.semverFile }}
-        run: |
-          RELEASE_VERSION="${{ inputs.releaseVersion }}"
-          echo "Release version will be ${RELEASE_VERSION}"
-          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_ENV
-          RELEASE_SHORT=$(echo "${RELEASE_VERSION}" | awk 'BEGIN {FS=".";OFS="."} { print $1,$2 }')
-          echo "RELEASE_SHORT=${RELEASE_SHORT}" >> $GITHUB_ENV
-          bash version.sh -s $RELEASE_VERSION
-
-      - name: Update changelog
-        uses: thomaseizinger/keep-a-changelog-new-release@1.3.0
-        with:
-          version: ${{ env.RELEASE_VERSION }}
-          changelogPath: ${{ inputs.changelogFile }}
-          tag: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
-
-      - name: Initialize mandatory git config
-        run: |
-          git config user.name "GitHub actions"
-          git config user.email noreply@github.com
-
-      - name: Commit changelog and manifest files
-        id: make-commit
-        env:
-          SEMVER_FILE: ${{ inputs.semverFile }}
-        run: |
-          git add ${{ inputs.changelogFile }}
-          git add $(bash version.sh -p)
-          git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
-          git push origin ${{ github.event.repository.default_branch }}
-          echo "::set-output name=commit::$(git rev-parse HEAD)"
-
-      - name: Extract Changelog
-        run: |
-          sed -n '/## \[${{ env.RELEASE_VERSION }}\]/,/## \[/p' ${{ inputs.changelogFile }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
-
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.github-token }}
-        with:
-          commitish: ${{ steps.make-commit.outputs.commit }}
-          tag_name: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
-          release_name: v${{ env.RELEASE_VERSION }} - ${{ inputs.imageName }}
-          draft: false
-          prerelease: false
-          body_path: CHANGELOG_RELEASE.md
-
-      - name: Create release branch from tag
-        run: |
-          git fetch
-          git checkout -b ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }} ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
-          git push origin ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }}
-
