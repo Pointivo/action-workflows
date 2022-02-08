@@ -289,7 +289,7 @@ jobs:
 
   deploy-to-k8s-qa:
     name: "Deploy to K8s-QA"
-    needs: [ publish-to-ecr, create-new-release, deploy-to-k8s-master ]
+    needs: [ publish-to-ecr, create-new-release ]
     runs-on: ubuntu-latest
     if: success() && (!inputs.skipPromotion || inputs.skipPromotion == 'false')
     steps:
