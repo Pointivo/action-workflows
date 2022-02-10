@@ -162,9 +162,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
           aws-region: ${{ inputs.ecr-region }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Tag and push images to ECR
         id: push
@@ -178,6 +175,10 @@ jobs:
           echo IMAGE_TAG=$IMAGE_TAG
           echo "::set-output name=repository::$REPOSITORY"
           echo "::set-output name=imageTag::$IMAGE_TAG"
+          
+          # ECR Login
+          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
+            docker login --username AWS --password-stdin ${{ secrets.PV_AWS_ACCOUNT_ID }}.dkr.ecr.${{ inputs.ecr-region }}.amazonaws.com
 
           # Publish to ECR
           docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
