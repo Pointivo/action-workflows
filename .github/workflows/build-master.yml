@@ -63,7 +63,7 @@ on:
 
     secrets:
       aws-account-id:
-        required: true
+        required: false
       aws-access-key-id:
         required: true
       aws-secret-access-key:
@@ -183,7 +183,7 @@ jobs:
           
           # ECR Login
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
-            docker login --username AWS --password-stdin ${{ secrets.aws-account-id }}.dkr.ecr.${{ inputs.ecr-region }}.amazonaws.com
+            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
 
           # Publish to ECR
           docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
