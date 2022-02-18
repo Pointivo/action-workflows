@@ -111,6 +111,7 @@ jobs:
     name: "Tag ECR Image"
     needs: [ copy-ecr ]
     runs-on: self-hosted
+    if: always()
     outputs:
       repository: ${{ steps.push.outputs.repository }}
       imageTag: ${{ steps.push.outputs.imageTag }}
