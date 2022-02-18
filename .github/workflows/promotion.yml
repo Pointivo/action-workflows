@@ -167,7 +167,6 @@ jobs:
           IMAGE_URL="${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}"
           echo "IMAGE_URL=${IMAGE_URL}"
           echo "IMAGE_URL=${IMAGE_URL}" >> $GITHUB_ENV
-          echo "NAMESPACE=${/${{ inputs.platform }}/pv-platform-//}" >> $GITHUB_ENV
           PLATFORM="${{ inputs.platform }}"
           echo "NAMESPACE=${PLATFORM/pv-platform-/}" >> $GITHUB_ENV
 
