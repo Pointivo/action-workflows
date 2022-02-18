@@ -111,7 +111,7 @@ jobs:
 
   ecr:
     name: "Tag ECR Image"
-    needs: [ copy-ecr ]
+    needs: [ check-env, copy-ecr ]
     runs-on: self-hosted
     if: always()
     outputs:
@@ -191,7 +191,7 @@ jobs:
     name: "Cleanup docker resources"
     needs: [ecr]
     runs-on: self-hosted
-    if: success() || failure()
+    if: always()
 
     steps:
       - name: Cleanup
