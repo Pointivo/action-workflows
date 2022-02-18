@@ -201,7 +201,7 @@ jobs:
 
     steps:
       - name: Cleanup
-        uses: pointivo/action-cleanup@v1
+        uses: pointivo/action-cleanup@main
         env:
           IMAGE_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
