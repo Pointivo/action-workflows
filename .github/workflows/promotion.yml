@@ -184,3 +184,16 @@ jobs:
           aws_region: us-east-1
           cluster_name: ${{ inputs.platform }}
           args: -n ${{ github.event.inputs.platform }} rollout status deployment/${{ env.POD_NAME }} --timeout=10m
+
+  cleanup:
+    name: "Cleanup docker resources"
+    needs: [ecr]
+    runs-on: self-hosted
+    if: success() || failure()
+
+    steps:
+      - name: Cleanup
+        uses: pointivo/action-cleanup@master
+        env:
+          IMAGE_NAME: ${{ inputs.imageName }}
+          IMAGE_TAG: ${{ inputs.tag }}
