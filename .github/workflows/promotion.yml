@@ -55,7 +55,9 @@ jobs:
         env:
           SOURCE_REGISTRY: ${{ secrets.source-ecr-registry }}
         if: "${{ env.SOURCE_REGISTRY != '' }}"
-        run: echo "::set-output name=defined::true"
+        run: |
+          echo "Skip K8s is ${{ inputs.skip-k8s }}"
+          echo "::set-output name=defined::true"
   copy-ecr:
     name: "Clone to Secondary ECR"
     needs: [ check-env ]
