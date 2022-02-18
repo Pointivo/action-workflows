@@ -116,7 +116,7 @@ jobs:
         uses: thomaseizinger/keep-a-changelog-new-release@1.3.0
         with:
           version: ${{ env.RELEASE_VERSION }}
-          changelogPath: ${{ inputs.changelogFile }}
+          changelogPath: ${{ inputs.changeLogFile }}
           tag: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
 
       - name: Initialize mandatory git config
@@ -129,7 +129,7 @@ jobs:
         env:
           SEMVER_FILE: ${{ inputs.semverFile }}
         run: |
-          git add ${{ inputs.changelogFile }}
+          git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
           git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
           echo "::set-output name=releaseCommit::$(git rev-parse HEAD)"
@@ -144,7 +144,7 @@ jobs:
 
       - name: Extract Changelog
         run: |
-          sed -n '/## \[${{ env.RELEASE_VERSION }}\]/,/## \[/p' ${{ inputs.changelogFile }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
+          sed -n '/## \[${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}\]/,/## \[/p' ${{ inputs.changeLogFile }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
 
       - name: Create Release
         uses: actions/create-release@v1
