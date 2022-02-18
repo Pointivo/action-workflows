@@ -278,10 +278,6 @@ jobs:
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
           # Move tags
-          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:master
-          docker push $REGISTRY/$REPOSITORY:master
-          docker rmi $REGISTRY/$REPOSITORY:master
-          
           docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:qa
           docker push $REGISTRY/$REPOSITORY:qa
           docker rmi $REGISTRY/$REPOSITORY:qa
