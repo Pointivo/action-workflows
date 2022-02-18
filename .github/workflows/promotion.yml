@@ -160,7 +160,6 @@ jobs:
           REGISTRY: ${{ secrets.ecr-registry }}
           REPOSITORY: ${{ needs.ecr.outputs.repository }}
           IMAGE_TAG: ${{ needs.ecr.outputs.imageTag }}
-          PLATFORM: ${{ inputs.platform }}
         run: |
           echo REGISTRY=$REGISTRY
           echo REPOSITORY=$REPOSITORY
@@ -168,7 +167,7 @@ jobs:
           IMAGE_URL="${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}"
           echo "IMAGE_URL=${IMAGE_URL}"
           echo "IMAGE_URL=${IMAGE_URL}" >> $GITHUB_ENV
-          echo "NAMESPACE=${/$PLATFORM/pv-platform-//}" >> $GITHUB_ENV
+          echo "NAMESPACE=${/${{ inputs.platform }}/pv-platform-//}" >> $GITHUB_ENV
 
       - name: Promote
         uses: ianbelcher/eks-kubectl-action@master
