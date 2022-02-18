@@ -27,12 +27,16 @@ on:
         default: false
 
     secrets:
+      aws-account-id:
+        required: false
       aws-access-key-id:
         required: true
       aws-secret-access-key:
         required: true
       ecr-registry:
         required: true
+      source-aws-account-id:
+        required: false
       source-aws-access-key-id:
         required: false
       source-aws-secret-access-key:
