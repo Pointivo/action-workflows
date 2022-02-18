@@ -1,0 +1,169 @@
+name: "Reusable Promotion"
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: 'App Name: (core-api)'
+        required: true
+        type: string
+      tag:
+        description: 'Image Tag (3.0.0_release_GH1.abc123; note underscores replace +/- chars)'
+        required: true
+        type: string
+      platform:
+        description: 'Environment (master, qa, prod)'
+        required: true
+        type: string
+      ecr-region:
+        description: AWS Region
+        required: false
+        type: string
+        default: us-east-1
+      skip-promotion:
+        description: Skip K8s deployment (if cronjob / consumer)
+        required: false
+        type: boolean
+        default: false
+
+    secrets:
+      aws-access-key-id:
+        required: true
+      aws-secret-access-key:
+        required: true
+      ecr-registry:
+        required: true
+      source-aws-access-key-id:
+        required: false
+      source-aws-secret-access-key:
+        required: false
+      source-ecr-registry:
+        required: false
+
+jobs:
+  copy-ecr:
+    name: "Clone to Secondary ECR"
+    runs-on: self-hosted
+    if: secrets.source-ecr-registry && source-ecr-registry != ''
+    steps:
+      - name: Configure Source AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.source-aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.source-aws-secret-access-key }}
+          aws-region: ${{ inputs.ecr-region }}
+
+      - name: Pull Image from Source ECR
+        env:
+          SOURCE_REGISTRY: ${{ secrets.source-ecr-registry }}
+          IMAGE_NAME: ${{ github.event.inputs.image }}
+          IMAGE_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          REPOSITORY=${REPOSITORY:-$IMAGE_NAME}
+          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
+            docker login --username AWS --password-stdin $SOURCE_REGISTRY
+          
+          docker pull $SOURCE_REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: ${{ inputs.ecr-region }}
+
+      - name: Tag and Push image to Secondary ECR
+        env:
+          REGISTRY: ${{ secrets.ecr-registry }}
+          SOURCE_REGISTRY: ${{ secrets.source-ecr-registry }}
+          IMAGE_NAME: ${{ github.event.inputs.image }}
+          IMAGE_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          echo IMAGE_TAG=$IMAGE_TAG
+          REPOSITORY=${REPOSITORY:-$IMAGE_NAME}
+          echo REPOSITORY=$REPOSITORY
+          
+          # ECR Login
+          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
+            docker login --username AWS --password-stdin $REGISTRY
+          
+          # Publish to ECR
+          docker tag $SOURCE_REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+  ecr:
+    name: "Tag ECR Image"
+    needs: [ copy-ecr ]
+    runs-on: self-hosted
+    outputs:
+      repository: ${{ steps.push.outputs.repository }}
+      imageTag: ${{ steps.push.outputs.imageTag }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: ${{ inputs.ecr-region }}
+
+      - name: Tag and push image to Amazon ECR
+        id: push
+        env:
+          REGISTRY: ${{ secrets.ecr-registry }}
+          IMAGE_NAME: ${{ inputs.image }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_TAG_ENV: ${{ inputs.platform }}
+        run: |
+          echo REGISTRY=$REGISTRY
+          REPOSITORY=$IMAGE_NAME
+          echo REPOSITORY=$REPOSITORY
+          echo "::set-output name=repository::$REPOSITORY"
+          echo "::set-output name=imageTag::$INPUT_TAG"
+          
+          # ECR Login
+          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
+            docker login --username AWS --password-stdin $REGISTRY
+
+          docker pull $REGISTRY/$REPOSITORY:$INPUT_TAG
+
+          # Move ENV tag to this Image
+          docker tag $REGISTRY/$REPOSITORY:$INPUT_TAG $REGISTRY/$REPOSITORY:$INPUT_TAG_ENV
+          docker push $REGISTRY/$REPOSITORY:$INPUT_TAG_ENV
+
+  deploy-to-k8s:
+    name: Deploy to K8s
+    needs: [ ecr ]
+    runs-on: ubuntu-latest
+    if: success() && inputs.skip-promotion == false
+    steps:
+      - name: Get Variables
+        env:
+          REGISTRY: ${{ secrets.ecr-registry }}
+          REPOSITORY: ${{ needs.ecr.outputs.repository }}
+          IMAGE_TAG: ${{ needs.ecr.outputs.imageTag }}
+        run: |
+          echo REGISTRY=$REGISTRY
+          echo REPOSITORY=$REPOSITORY
+          echo IMAGE_TAG=$IMAGE_TAG
+          IMAGE_URL="${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}"
+          echo "IMAGE_URL=${IMAGE_URL}"
+          echo "IMAGE_URL=${IMAGE_URL}" >> $GITHUB_ENV
+          echo "POD_NAME=${{ github.event.inputs.image }}" >> $GITHUB_ENV
+
+      - name: Promote
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          aws_access_key_id: ${{ secrets.aws-access-key-id }}
+          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
+          aws_region: ${{ inputs.ecr-region }}
+          cluster_name: ${{ inputs.platform }}
+          args: -n ${{ github.event.inputs.platform }} set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
+
+      - name: Monitor Rollout
+        uses: ianbelcher/eks-kubectl-action@master
+        with:
+          aws_access_key_id: ${{ secrets.aws-access-key-id }}
+          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
+          aws_region: us-east-1
+          cluster_name: ${{ inputs.platform }}
+          args: -n ${{ github.event.inputs.platform }} rollout status deployment/${{ env.POD_NAME }} --timeout=10m
