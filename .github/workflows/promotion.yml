@@ -153,7 +153,7 @@ jobs:
     name: Deploy to K8s
     needs: [ ecr ]
     runs-on: ubuntu-latest
-    if: success() && inputs.skip-k8s != true
+    if: always() && inputs.skip-k8s != true
     steps:
       - name: Get Variables
         env:
