@@ -131,13 +131,13 @@ jobs:
         run: |
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
-          git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
+          git pull && git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
           echo "::set-output name=releaseCommit::$(git rev-parse HEAD)"
           
           # Bump minor version
           bash version.sh -b minor
           git add $(bash version.sh -p)
-          git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})"
+          git pull && git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})"
           
           # Single push
           git push origin ${{ github.event.repository.default_branch }}
