@@ -41,10 +41,22 @@ on:
         required: false
 
 jobs:
+  check-env:
+    name: Check ENV
+    runs-on: ubuntu-latest
+    outputs:
+      needs-copy: ${{ steps.vars.outputs.defined }}
+    steps:
+      - id: vars
+        env:
+          SOURCE_REGISTRY: ${{ secrets.source-ecr-registry }}
+        if: "${{ env.SOURCE_REGISTRY != '' }}"
+        run: echo "::set-output name=defined::true"
   copy-ecr:
     name: "Clone to Secondary ECR"
+    needs: [ check-env ]
+    if: needs.check-env.outputs.needs-copy == 'true'
     runs-on: self-hosted
-    if: secrets.source-ecr-registry && source-ecr-registry != ''
     steps:
       - name: Configure Source AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
