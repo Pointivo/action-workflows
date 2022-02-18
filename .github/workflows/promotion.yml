@@ -20,7 +20,7 @@ on:
         required: false
         type: string
         default: us-east-1
-      skip-promotion:
+      skip-k8s:
         description: Skip K8s deployment (if cronjob / consumer)
         required: false
         type: boolean
@@ -134,7 +134,7 @@ jobs:
     name: Deploy to K8s
     needs: [ ecr ]
     runs-on: ubuntu-latest
-    if: success() && inputs.skip-promotion == false
+    if: success() && inputs.skip-k8s == false
     steps:
       - name: Get Variables
         env:
