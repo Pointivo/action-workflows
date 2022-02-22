@@ -72,8 +72,6 @@ on:
         required: true
       github-token:
         required: true
-      eks-master-cluster:
-        required: true
       eks-qa-cluster:
         required: true
 
