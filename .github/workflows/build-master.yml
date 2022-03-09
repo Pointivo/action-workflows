@@ -79,7 +79,7 @@ on:
 jobs:
   build-and-test:
     name: "Build and Test"
-    runs-on: [self-hosted]
+    runs-on: [ self-hosted, ops-pv ]
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
@@ -152,7 +152,7 @@ jobs:
   publish-to-ecr:
     name: "Publish Image to ECR"
     needs: build-and-test
-    runs-on: self-hosted
+    runs-on: [ self-hosted, ops-pv ]
     if: success()
     outputs:
       repository: ${{ steps.push.outputs.repository }}
@@ -186,7 +186,7 @@ jobs:
             docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
 
           # Publish to ECR
-          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITOfRY:$IMAGE_TAG
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
           # Move tag
@@ -196,7 +196,7 @@ jobs:
   cleanup:
     name: "Cleanup docker resources"
     needs: [publish-to-ecr, build-and-test]
-    runs-on: self-hosted
+    runs-on: [ self-hosted, ops-pv ]
     if: success() || failure()
 
     steps:

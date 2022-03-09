@@ -62,7 +62,7 @@ jobs:
     name: "Clone to Secondary ECR"
     needs: [ check-env ]
     if: needs.check-env.outputs.needs-copy == 'true'
-    runs-on: self-hosted
+    runs-on: [ self-hosted, ops-pv ]
     steps:
       - name: Configure Source AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -112,7 +112,7 @@ jobs:
   ecr:
     name: "Tag ECR Image"
     needs: [ check-env, copy-ecr ]
-    runs-on: self-hosted
+    runs-on: [ self-hosted, ops-pv ]
     if: always()
     outputs:
       repository: ${{ steps.push.outputs.repository }}
@@ -191,7 +191,7 @@ jobs:
   cleanup:
     name: "Cleanup docker resources"
     needs: [ ecr ]
-    runs-on: self-hosted
+    runs-on: [ self-hosted, ops-pv ]
     if: always()
 
     steps:

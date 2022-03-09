@@ -165,7 +165,7 @@ jobs:
   build-and-test:
     name: "Prepare build"
     needs: create-new-release
-    runs-on: [ self-hosted ]
+    runs-on: [ self-hosted, ops-pv ]
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
@@ -245,7 +245,7 @@ jobs:
   publish-to-ecr:
     name: "Publish Image to ECR"
     needs: build-and-test
-    runs-on: [ self-hosted ]
+    runs-on: [ self-hosted, ops-pv ]
     if: success()
     outputs:
       repository: ${{ steps.push.outputs.repository }}
@@ -325,7 +325,7 @@ jobs:
   cleanup:
     name: "Cleanup docker resources"
     needs: [publish-to-ecr, build-and-test]
-    runs-on: [ self-hosted ]
+    runs-on: [ self-hosted, ops-pv ]
     if: success() || failure()
 
     steps:
