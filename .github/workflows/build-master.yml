@@ -186,7 +186,7 @@ jobs:
             docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
 
           # Publish to ECR
-          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITOfRY:$IMAGE_TAG
+          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
           # Move tag
