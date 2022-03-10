@@ -12,9 +12,6 @@ on:
       semverFile:
         required: true
         type: string
-      extraBuildArgs:
-        required: true
-        type: string
       testPath:
         required: true
         type: string
@@ -45,6 +42,9 @@ on:
         required: false
         type: string
         default: release
+      extraBuildArgs:
+        required: false
+        type: string
       dockerfileDirectory:
         required: false
         type: string
