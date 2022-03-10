@@ -9,9 +9,6 @@ on:
       semverFile:
         required: true
         type: string
-      cachedStages:
-        required: true
-        type: string
       pullImages:
         required: true
         type: string
@@ -28,6 +25,9 @@ on:
         required: true
         type: string
       # Not Required
+      cachedStages:
+        required: false
+        type: string
       buildStage:
         required: false
         type: string
