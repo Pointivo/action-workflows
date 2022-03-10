@@ -181,6 +181,16 @@ jobs:
           echo "PLATFORM=${PLATFORM}" >> $GITHUB_ENV
           echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
 
+      - name: Test
+        uses: ianbelcher/eks-kubectl-action@master
+        if: inputs.image == 'rabbit-pod-autoscaler'
+        with:
+          aws_access_key_id: ${{ secrets.aws-access-key-id }}
+          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
+          aws_region: ${{ inputs.ecr-region }}
+          cluster_name: ${{ env.PLATFORM }}
+          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; echo ${line}; done
+
       - name: Promote Special
         uses: ianbelcher/eks-kubectl-action@master
         if: inputs.image == 'rabbit-pod-autoscaler'
@@ -189,7 +199,7 @@ jobs:
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.ecr-region }}
           cluster_name: ${{ env.PLATFORM }}
-          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; do kubectl -n ${{ env.NAMESPACE }} set image deployment/${line} ${{ inputs.image }}=${{ env.IMAGE_URL }} || (kubectl -n ${{ env.NAMESPACE }} describe deployment ${line} && exit 1); done
+          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; do kubectl -n ${{ env.NAMESPACE }} set image deployment/${line} ${{ inputs.image }}=${{ env.IMAGE_URL }}; done
 
       - name: Promote
         uses: ianbelcher/eks-kubectl-action@master
