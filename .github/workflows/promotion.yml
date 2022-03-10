@@ -50,28 +50,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       needs-copy: ${{ steps.vars.outputs.defined }}
-      platform: ${{ steps.vars.outputs.platform }}
-      namespace: ${{ steps.vars.outputs.namespace }}
     steps:
       - id: vars
         env:
           SOURCE_REGISTRY: ${{ secrets.source-ecr-registry }}
-          PLATFORM: ${{ inputs.platform }}
         if: "${{ env.SOURCE_REGISTRY != '' }}"
         run: |
           echo "Skip K8s is ${{ inputs.skip-k8s }}"
           echo "::set-output name=defined::true"
-          
-          # strip pv-platform from input (if exists)
-          NAMESPACE=${PLATFORM/pv-platform-/}
-          
-          # if someone forgot to specify "pv-platform-" correct it for them
-          if [[ ${PLATFORM} != *"atc"* ]];then
-            PLATFORM="pv-platform-$NAMESPACE"
-          fi
-          
-          echo "::set-output name=platform::$PLATFORM"
-          echo "::set-output name=namespace::$NAMESPACE"
 
   copy-ecr:
     name: "Clone to Secondary ECR"
@@ -166,7 +152,7 @@ jobs:
 
   deploy-to-k8s:
     name: Deploy to K8s
-    needs: [ check-env, ecr ]
+    needs: [ ecr ]
     runs-on: ubuntu-latest
     if: always() && inputs.skip-k8s != true
     steps:
@@ -175,6 +161,7 @@ jobs:
           REGISTRY: ${{ secrets.ecr-registry }}
           REPOSITORY: ${{ needs.ecr.outputs.repository }}
           IMAGE_TAG: ${{ needs.ecr.outputs.imageTag }}
+          PLATFORM: ${{ inputs.platform }}
         run: |
           echo REGISTRY=$REGISTRY
           echo REPOSITORY=$REPOSITORY
@@ -182,9 +169,17 @@ jobs:
           IMAGE_URL="${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}"
           echo "IMAGE_URL=${IMAGE_URL}"
           echo "IMAGE_URL=${IMAGE_URL}" >> $GITHUB_ENV
-          PLATFORM="${{ inputs.platform }}"
           
-          echo "NAMESPACE=${PLATFORM/pv-platform-/}" >> $GITHUB_ENV
+          # strip pv-platform from input (if exists)
+          NAMESPACE=${PLATFORM/pv-platform-/}
+          # if someone forgot to specify "pv-platform-" correct it for them
+          if [[ ${PLATFORM} != *"atc"* ]];then
+            PLATFORM="pv-platform-$NAMESPACE"
+          fi
+          echo "PLATFORM=${PLATFORM}" 
+          echo "NAMESPACE=${NAMESPACE}"
+          echo "PLATFORM=${PLATFORM}" >> $GITHUB_ENV
+          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
 
       - name: Promote Special
         uses: ianbelcher/eks-kubectl-action@master
@@ -193,8 +188,8 @@ jobs:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.ecr-region }}
-          cluster_name: ${{ needs.check-env.outputs.platform }}
-          args: -n ${{ needs.check-env.outputs.namespace }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; do kubectl -n ${{ needs.check-env.outputs.namespace }} set image deployment/${line} ${{ inputs.image }}=${{ env.IMAGE_URL }} || (kubectl -n ${{ needs.check-env.outputs.namespace }} describe deployment ${line} && exit 1); done
+          cluster_name: ${{ env.PLATFORM }}
+          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; do kubectl -n ${{ env.NAMESPACE }} set image deployment/${line} ${{ inputs.image }}=${{ env.IMAGE_URL }} || (kubectl -n ${{ env.NAMESPACE }} describe deployment ${line} && exit 1); done
 
       - name: Promote
         uses: ianbelcher/eks-kubectl-action@master
@@ -203,8 +198,8 @@ jobs:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.eks-region }}
-          cluster_name: ${{ needs.check-env.outputs.platform }}
-          args: -n ${{ needs.check-env.outputs.namespace }} set image deployment/${{ inputs.image }} ${{ inputs.image }}=${{ env.IMAGE_URL }}
+          cluster_name: ${{ env.PLATFORM }}
+          args: -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} ${{ inputs.image }}=${{ env.IMAGE_URL }}
 
       - name: Monitor Rollout
         uses: ianbelcher/eks-kubectl-action@master
@@ -213,8 +208,8 @@ jobs:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.ecr-region }}
-          cluster_name: ${{ needs.check-env.outputs.platform }}
-          args: -n ${{ needs.check-env.outputs.namespace }} rollout status deployment/${{ inputs.image }} --timeout=10m
+          cluster_name: ${{ env.PLATFORM }}
+          args: -n ${{ env.NAMESPACE }} rollout status deployment/${{ inputs.image }} --timeout=10m
 
   cleanup:
     name: "Cleanup docker resources"
