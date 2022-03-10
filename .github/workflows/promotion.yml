@@ -153,7 +153,7 @@ jobs:
   deploy-to-k8s:
     name: Deploy to K8s
     needs: [ ecr ]
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, ops-pv]
     if: always() && inputs.skip-k8s != true
     steps:
       - name: Get Variables
@@ -176,50 +176,26 @@ jobs:
           if [[ ${PLATFORM} != *"atc"* ]];then
             PLATFORM="pv-platform-$NAMESPACE"
           fi
-          echo "PLATFORM=${PLATFORM}" 
-          echo "NAMESPACE=${NAMESPACE}"
           echo "PLATFORM=${PLATFORM}" >> $GITHUB_ENV
           echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
 
-      - name: Test
-        uses: ianbelcher/eks-kubectl-action@master
-        if: inputs.image == 'rabbit-pod-autoscaler'
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws_access_key_id: ${{ secrets.aws-access-key-id }}
-          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ inputs.ecr-region }}
-          cluster_name: ${{ env.PLATFORM }}
-          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$'
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: ${{ inputs.ecr-region }}
+
+      - name: Authorize EKS
+        run: aws eks update-kubeconfig --name ${{ env.PLATFORM }}
 
       - name: Promote Special
-        uses: ianbelcher/eks-kubectl-action@master
         if: inputs.image == 'rabbit-pod-autoscaler'
-        with:
-          aws_access_key_id: ${{ secrets.aws-access-key-id }}
-          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ inputs.ecr-region }}
-          cluster_name: ${{ env.PLATFORM }}
-          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; do kubectl -n ${{ env.NAMESPACE }} set image deployment/${line} ${{ inputs.image }}=${{ env.IMAGE_URL }}; done
+        run: kubectl -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; do kubectl -n ${{ env.NAMESPACE }} set image deployment/${line} ${{ inputs.image }}=${{ env.IMAGE_URL }}; done
 
       - name: Promote
-        uses: ianbelcher/eks-kubectl-action@master
         if: inputs.image != 'rabbit-pod-autoscaler'
-        with:
-          aws_access_key_id: ${{ secrets.aws-access-key-id }}
-          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ inputs.eks-region }}
-          cluster_name: ${{ env.PLATFORM }}
-          args: -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} ${{ inputs.image }}=${{ env.IMAGE_URL }}
-
-      - name: Monitor Rollout
-        uses: ianbelcher/eks-kubectl-action@master
-        if: inputs.image != 'rabbit-pod-autoscaler'
-        with:
-          aws_access_key_id: ${{ secrets.aws-access-key-id }}
-          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ inputs.ecr-region }}
-          cluster_name: ${{ env.PLATFORM }}
-          args: -n ${{ env.NAMESPACE }} rollout status deployment/${{ inputs.image }} --timeout=10m
+        run: kubectl -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} ${{ inputs.image }}=${{ env.IMAGE_URL }} && kubectl -n ${{ env.NAMESPACE }} rollout status deployment/${{ inputs.image }} --timeout=10m
 
   cleanup:
     name: "Cleanup docker resources"
