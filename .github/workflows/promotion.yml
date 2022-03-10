@@ -170,17 +170,29 @@ jobs:
           PLATFORM="${{ inputs.platform }}"
           echo "NAMESPACE=${PLATFORM/pv-platform-/}" >> $GITHUB_ENV
 
-      - name: Promote
+      - name: Promote Special
         uses: ianbelcher/eks-kubectl-action@master
+        if: inputs.image == 'rabbit-pod-autoscaler'
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.ecr-region }}
           cluster_name: ${{ inputs.platform }}
+          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; do kubectl -n ${{ env.NAMESPACE }} set image deployment/${line} ${{ inputs.image }}=${{ env.IMAGE_URL }} || (kubectl -n ${{ env.NAMESPACE }} describe deployment ${line} && exit 1); done
+
+      - name: Promote
+        uses: ianbelcher/eks-kubectl-action@master
+        if: inputs.image != 'rabbit-pod-autoscaler'
+        with:
+          aws_access_key_id: ${{ secrets.aws-access-key-id }}
+          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
+          aws_region: ${{ inputs.eks-region }}
+          cluster_name: ${{ secrets.eks-cluster-name }}
           args: -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} ${{ inputs.image }}=${{ env.IMAGE_URL }}
 
       - name: Monitor Rollout
         uses: ianbelcher/eks-kubectl-action@master
+        if: inputs.image != 'rabbit-pod-autoscaler'
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}

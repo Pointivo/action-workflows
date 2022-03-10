@@ -306,6 +306,7 @@ jobs:
 
       - name: Promote to QA
         uses: ianbelcher/eks-kubectl-action@master
+        if: inputs.imageName != 'rabbit-pod-autoscaler'
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
@@ -315,6 +316,7 @@ jobs:
 
       - name: Monitor Rollout
         uses: ianbelcher/eks-kubectl-action@master
+        if: inputs.imageName != 'rabbit-pod-autoscaler'
         with:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
