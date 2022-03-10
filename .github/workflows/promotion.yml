@@ -189,7 +189,7 @@ jobs:
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.ecr-region }}
           cluster_name: ${{ env.PLATFORM }}
-          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$' | while read line; echo ${line}; done
+          args: -n ${{ env.NAMESPACE }} get deployments | awk '{print $1}' | grep '${{ inputs.image }}$'
 
       - name: Promote Special
         uses: ianbelcher/eks-kubectl-action@master
