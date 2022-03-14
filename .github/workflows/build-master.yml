@@ -139,7 +139,9 @@ jobs:
 
     steps:
       - name: Download Artifacts
+        id: download
         uses: actions/download-artifact@v2
+        continue-on-error: true
         with:
           name: unit-tests-artifacts
 
@@ -148,6 +150,7 @@ jobs:
 
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
+        if: steps.download.outcome == 'success'
         with:
           fail_on: ${{ inputs.unit-test-fail-on }}
           files: |
