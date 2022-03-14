@@ -48,11 +48,11 @@ on:
       dockerfileName:
         required: false
         type: string
-      unit-test-fail-on:
+      ignore-missing-unit-tests:
         required: false
-        type: string
-        description: When to fail based on unit tests
-        default: "test failures"
+        type: boolean
+        description: When to fail if missing unit tests
+        default: false
       ecr-region:
         required: false
         type: string
@@ -141,7 +141,7 @@ jobs:
       - name: Download Artifacts
         id: download
         uses: actions/download-artifact@v2
-        continue-on-error: true
+        continue-on-error: ${{ inputs.ignore-missing-unit-tests }}
         with:
           name: unit-tests-artifacts
 
@@ -152,7 +152,6 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: steps.download.outcome == 'success'
         with:
-          fail_on: ${{ inputs.unit-test-fail-on }}
           files: |
             *.xml
             ./**/*.xml
