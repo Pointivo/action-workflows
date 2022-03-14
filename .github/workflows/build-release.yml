@@ -140,7 +140,7 @@ jobs:
       - name: Download Artifacts
         id: download
         uses: actions/download-artifact@v2
-        continue-on-error: ${{ inputs.ignore-missing-unit-tests }}
+        continue-on-error: inputs.ignore-missing-unit-tests
         with:
           name: unit-tests-artifacts
 
