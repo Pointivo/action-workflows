@@ -137,10 +137,14 @@ jobs:
     runs-on: ubuntu-latest
     if: success() || failure()
     steps:
+      - name: Check ENV
+        id: check
+        run: echo "::set-output name=ignoreMissing::${{ inputs.ignore-missing-unit-tests }}"
+
       - name: Download Artifacts
         id: download
         uses: actions/download-artifact@v2
-        continue-on-error: ${{ inputs.ignore-missing-unit-tests != '' }}
+        continue-on-error: ${{ steps.check.output.ignoreMissing != '' }}
         with:
           name: unit-tests-artifacts
 
