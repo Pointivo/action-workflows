@@ -51,6 +51,11 @@ on:
       dockerfileName:
         required: false
         type: string
+      unit-test-fail-on:
+        required: false
+        type: string
+        description: When to fail based on unit tests
+        default: "test failures"
       ecr-region:
         required: false
         type: string
@@ -237,6 +242,7 @@ jobs:
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
         with:
+          fail_on: ${{ inputs.unit-test-fail-on }}
           files: |
             *.xml
             ./**/*.xml
