@@ -144,7 +144,7 @@ jobs:
       - name: Download Artifacts
         id: download
         uses: actions/download-artifact@v2
-        continue-on-error: ${{ steps.check.output.ignoreMissing != '' }}
+        continue-on-error: ${{ steps.check.outputs.ignoreMissing != '' }}
         with:
           name: unit-tests-artifacts
 
