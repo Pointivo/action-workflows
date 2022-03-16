@@ -25,6 +25,9 @@ on:
         required: false
         type: boolean
         default: false
+      k8s-namespace:
+        required: false
+        type: string
 
     secrets:
       aws-account-id:
@@ -161,6 +164,7 @@ jobs:
           REGISTRY: ${{ secrets.ecr-registry }}
           REPOSITORY: ${{ needs.ecr.outputs.repository }}
           IMAGE_TAG: ${{ needs.ecr.outputs.imageTag }}
+          NAMESPACE: ${{ inputs.k8s-namespace }}
           PLATFORM: ${{ inputs.platform }}
         run: |
           echo REGISTRY=$REGISTRY
@@ -170,8 +174,11 @@ jobs:
           echo "IMAGE_URL=${IMAGE_URL}"
           echo "IMAGE_URL=${IMAGE_URL}" >> $GITHUB_ENV
           
-          # strip pv-platform from input (if exists)
-          NAMESPACE=${PLATFORM/pv-platform-/}
+          if [ ! -z "$NAMESPACE" ]; then
+            NAMESPACE=${PLATFORM/pv-platform-/}
+            echo "Setting K8s Namespace to default: ${NAMESPACE}"
+          fi
+          
           # if someone forgot to specify "pv-platform-" correct it for them
           if [[ ${PLATFORM} != *"atc"* ]];then
             PLATFORM="pv-platform-$NAMESPACE"

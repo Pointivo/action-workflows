@@ -64,7 +64,10 @@ on:
         required: false
         type: string
         default: us-east-1
-
+      k8s-deployment-namespace:
+        required: false
+        type: string
+        default: qa
 
     secrets:
       aws-account-id:
@@ -325,7 +328,7 @@ jobs:
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-qa-cluster }}
-          args: -n qa set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
+          args: -n ${{ inputs.k8s-deployment-namespace }} set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
 
       - name: Monitor Rollout
         uses: ianbelcher/eks-kubectl-action@master
@@ -335,7 +338,7 @@ jobs:
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-qa-cluster }}
-          args: -n qa rollout status deployment/${{ env.POD_NAME }} --timeout=10m
+          args: -n ${{ inputs.k8s-deployment-namespace }} rollout status deployment/${{ env.POD_NAME }} --timeout=10m
 
   cleanup:
     name: "Cleanup docker resources"
