@@ -143,6 +143,8 @@ jobs:
           echo "::set-output name=repository::$REPOSITORY"
           echo "::set-output name=imageTag::$INPUT_TAG"
           
+          INPUT_TAG_ENV=${INPUT_TAG_ENV/pv-platform-/}
+          
           # ECR Login
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
             docker login --username AWS --password-stdin $REGISTRY
