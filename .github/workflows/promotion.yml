@@ -182,7 +182,7 @@ jobs:
           fi
           
           # if someone forgot to specify "pv-platform-" correct it for them
-          if [[ ${PLATFORM} != *"atc"* ]];then
+          if [[ ${PLATFORM} != *"atc"* && ${NAMESPACE} != "kube-sytem" ]];then
             PLATFORM="pv-platform-$NAMESPACE"
           fi
           echo "PLATFORM=${PLATFORM}"
