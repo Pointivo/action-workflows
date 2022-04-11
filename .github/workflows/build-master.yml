@@ -15,9 +15,6 @@ on:
       buildStatusPath:
         required: true
         type: string
-      changeLogFile:
-        required: true
-        type: string
       # Not Required
       skipPromotion:
         required: false
