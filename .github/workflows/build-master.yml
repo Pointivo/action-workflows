@@ -15,6 +15,9 @@ on:
       buildStatusPath:
         required: true
         type: string
+      changeLogFile:  # deprecated
+        required: false
+        type: string
       # Not Required
       skipPromotion:
         required: false
