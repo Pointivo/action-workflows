@@ -152,6 +152,7 @@ jobs:
         run: ls -R
 
       - name: Publish Unit Test Results
+        id: test-results
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: steps.download.outcome == 'success'
         with:
@@ -159,6 +160,9 @@ jobs:
             *.xml
             ./**/*.xml
             !**_cov.xml
+
+      - name: Conclusion
+        run: echo "Conclusion is ${{ fromJSON( steps.test-results.outputs.json ).conclusion }}"
 
   publish-to-ecr:
     name: "Publish Image to ECR"
