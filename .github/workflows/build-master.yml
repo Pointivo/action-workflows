@@ -163,9 +163,6 @@ jobs:
             ./**/*.xml
             !**_cov.xml
 
-      - name: Conclusion
-        run: echo "Conclusion is ${{ fromJSON( steps.test-results.outputs.json ).conclusion }}"
-
   publish-to-ecr:
     name: "Publish Image to ECR"
     needs: build-and-test
