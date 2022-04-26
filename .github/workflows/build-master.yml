@@ -207,6 +207,17 @@ jobs:
           docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$BRANCH
           docker push $REGISTRY/$REPOSITORY:$BRANCH
 
+      - name: Tag and Push to shadow app repo
+        if: github.repository == 'wireframe-tool'
+        env:
+          REGISTRY: ${{ secrets.ecr-registry }}
+          REPOSITORY: ${{ step.push.outputs.repository }}
+          IMAGE_TAG: ${{ step.push.outputs.imageTag }}
+        run: |
+          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY-shadow:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY-shadow:$IMAGE_TAG
+          docker rmi $REGISTRY/$REPOSITORY-shadow:$IMAGE_TAG
+
   cleanup:
     name: "Cleanup docker resources"
     needs: [publish-to-ecr, build-and-test]
