@@ -109,6 +109,9 @@ jobs:
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
             docker login --username AWS --password-stdin $REGISTRY
           
+          # Make sure we are not trying to copy a shadow registry (does not exit)
+          REPOSITORY=${REPOSITORY/-shadow/}
+          
           # Publish to ECR
           docker tag $SOURCE_REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
@@ -140,10 +143,16 @@ jobs:
           echo REGISTRY=$REGISTRY
           REPOSITORY=$IMAGE_NAME
           echo REPOSITORY=$REPOSITORY
-          echo "::set-output name=repository::$REPOSITORY"
-          echo "::set-output name=imageTag::$INPUT_TAG"
           
           INPUT_TAG_ENV=${INPUT_TAG_ENV/pv-platform-/}
+          
+          if [[ ${IMAGE_NAME} == *"shadow"* ]];then
+            echo "No need to re-tag shadow apps"
+            exit 0
+          fi
+          
+          echo "::set-output name=repository::$REPOSITORY"
+          echo "::set-output name=imageTag::$INPUT_TAG"
           
           # ECR Login
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
