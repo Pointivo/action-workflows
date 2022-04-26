@@ -221,7 +221,7 @@ jobs:
 
       - name: Promote
         if: inputs.image != 'rabbit-pod-autoscaler'
-        run: kubectl -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} $CONTAINER_NAME=${{ env.IMAGE_URL }} && kubectl -n ${{ env.NAMESPACE }} rollout status deployment/${{ inputs.image }} --timeout=10m
+        run: kubectl -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} ${{ env.CONTAINER_NAME }}=${{ env.IMAGE_URL }} && kubectl -n ${{ env.NAMESPACE }} rollout status deployment/${{ inputs.image }} --timeout=10m
 
   cleanup:
     name: "Cleanup docker resources"
