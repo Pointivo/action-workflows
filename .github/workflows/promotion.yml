@@ -198,6 +198,12 @@ jobs:
           echo "PLATFORM=${PLATFORM}" >> $GITHUB_ENV
           echo "NAMESPACE=${NAMESPACE}"
           echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
+          
+          # typically the container is the same name as deployment except for shadow apps
+          CONTAINER_NAME=${{ inputs.image }}
+          CONTAINER_NAME=${CONTAINER_NAME/-shadow/}
+          echo "CONTAINER_NAME=${CONTAINER_NAME}" >> $GITHUB_ENV
+          
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -215,7 +221,7 @@ jobs:
 
       - name: Promote
         if: inputs.image != 'rabbit-pod-autoscaler'
-        run: kubectl -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} ${{ inputs.image }}=${{ env.IMAGE_URL }} && kubectl -n ${{ env.NAMESPACE }} rollout status deployment/${{ inputs.image }} --timeout=10m
+        run: kubectl -n ${{ env.NAMESPACE }} set image deployment/${{ inputs.image }} $CONTAINER_NAME=${{ env.IMAGE_URL }} && kubectl -n ${{ env.NAMESPACE }} rollout status deployment/${{ inputs.image }} --timeout=10m
 
   cleanup:
     name: "Cleanup docker resources"
