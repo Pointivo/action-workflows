@@ -207,17 +207,6 @@ jobs:
           docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$BRANCH
           docker push $REGISTRY/$REPOSITORY:$BRANCH
 
-      - name: Tag and Push to shadow app repo
-        if: github.repository == 'wireframe-tool'
-        env:
-          REGISTRY: ${{ secrets.ecr-registry }}
-          REPOSITORY: ${{ steps.push.outputs.repository }}
-          IMAGE_TAG: ${{ steps.push.outputs.imageTag }}
-        run: |
-          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY-shadow:$IMAGE_TAG
-          docker push $REGISTRY/$REPOSITORY-shadow:$IMAGE_TAG
-          docker rmi $REGISTRY/$REPOSITORY-shadow:$IMAGE_TAG
-
   cleanup:
     name: "Cleanup docker resources"
     needs: [publish-to-ecr, build-and-test]
@@ -249,10 +238,8 @@ jobs:
           echo IMAGE_TAG=$IMAGE_TAG
           echo POD_NAME=$POD_NAME
           IMAGE_URL="${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}"
-          IMAGE_URL_SHADOW="${REGISTRY}/${REPOSITORY}-shadow:${IMAGE_TAG}"
           echo "IMAGE_URL=${IMAGE_URL}"
           echo "IMAGE_URL=${IMAGE_URL}" >> $GITHUB_ENV
-          echo "IMAGE_URL_SHADOW=${IMAGE_URL_SHADOW}" >> $GITHUB_ENV
           echo "POD_NAME=${POD_NAME}" >> $GITHUB_ENV
 
       - name: Promote to Master
@@ -264,16 +251,6 @@ jobs:
           aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-cluster-name }}
           args: -n ${{ inputs.k8s-deployment-namespace }} set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
-
-      - name: Promote to Shadow
-        uses: ianbelcher/eks-kubectl-action@master
-        if: github.repository == 'wireframe-tool'
-        with:
-          aws_access_key_id: ${{ secrets.aws-access-key-id }}
-          aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
-          aws_region: ${{ inputs.eks-region }}
-          cluster_name: ${{ secrets.eks-cluster-name }}
-          args: -n ${{ inputs.k8s-deployment-namespace }} set image deployment/${{ env.POD_NAME }}-shadow ${{ env.POD_NAME }}-shadow=${{ env.IMAGE_URL_SHADOW }}
 
       - name: Monitor Rollout
         uses: ianbelcher/eks-kubectl-action@master
