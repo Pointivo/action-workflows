@@ -194,17 +194,21 @@ jobs:
           echo BRANCH=$BRANCH
           echo "::set-output name=repository::$REPOSITORY"
           echo "::set-output name=imageTag::$IMAGE_TAG"
-          
-          # ECR Login
-          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
-            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
 
           # Move tag
           docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
           docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$BRANCH
           
           # Publish to ECR
+          
+          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
+            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
+          
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          
+          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
+            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
+          
           docker push $REGISTRY/$REPOSITORY:$BRANCH
 
   cleanup:
