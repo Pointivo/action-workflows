@@ -199,12 +199,12 @@ jobs:
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
             docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
 
-          # Publish to ECR
-          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-
           # Move tag
+          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
           docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$BRANCH
+          
+          # Publish to ECR
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           docker push $REGISTRY/$REPOSITORY:$BRANCH
 
   cleanup:
