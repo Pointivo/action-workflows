@@ -85,6 +85,9 @@ jobs:
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
             docker login --username AWS --password-stdin $SOURCE_REGISTRY
           
+          # Make sure we are not trying to copy a shadow registry (does not exit)
+          REPOSITORY=${REPOSITORY/-shadow/}
+          
           docker pull $SOURCE_REGISTRY/$REPOSITORY:$IMAGE_TAG
 
       - name: Configure AWS credentials
