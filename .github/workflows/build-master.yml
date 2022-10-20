@@ -139,7 +139,7 @@ jobs:
     steps:
       - name: Check ENV
         id: check
-        run: echo "::set-output name=ignoreMissing::${{ inputs.ignore-missing-unit-tests }}"
+        run: echo "ignoreMissing=${{ inputs.ignore-missing-unit-tests }}" >> $GITHUB_OUTPUT
 
       - name: Download Artifacts
         id: download
@@ -192,8 +192,8 @@ jobs:
           echo IMAGE_TAG=$IMAGE_TAG
           BRANCH=${GITHUB_REF#refs/heads/}
           echo BRANCH=$BRANCH
-          echo "::set-output name=repository::$REPOSITORY"
-          echo "::set-output name=imageTag::$IMAGE_TAG"
+          echo "repository=$REPOSITORY" >> $GITHUB_OUTPUT
+          echo "imageTag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
           # Move tag
           docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
