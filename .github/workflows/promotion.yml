@@ -69,7 +69,7 @@ jobs:
     runs-on: [ self-hosted, ops-pv ]
     steps:
       - name: Configure Source AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.source-aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.source-aws-secret-access-key }}
@@ -91,7 +91,7 @@ jobs:
           docker pull $SOURCE_REGISTRY/$REPOSITORY:$IMAGE_TAG
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
@@ -128,7 +128,7 @@ jobs:
       imageTag: ${{ steps.push.outputs.imageTag }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
@@ -209,7 +209,7 @@ jobs:
           
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
