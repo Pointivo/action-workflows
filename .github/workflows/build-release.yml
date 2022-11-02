@@ -75,7 +75,7 @@ jobs:
       imageTag: ${{ steps.build.outputs.imageTag }}
       appVersion: ${{ steps.version.outputs.appVersion }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           lfs: true
 
@@ -219,7 +219,7 @@ jobs:
     container:
       image: ghcr.io/pointivo/devops-docker
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
