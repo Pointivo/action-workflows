@@ -116,7 +116,7 @@ jobs:
           echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_ENV
           RELEASE_SHORT=$(echo "${RELEASE_VERSION}" | awk 'BEGIN {FS=".";OFS="."} { print $1,$2 }')
           echo "RELEASE_SHORT=${RELEASE_SHORT}" >> $GITHUB_ENV
-          echo "::set-output name=releaseVersion::$RELEASE_VERSION"
+          echo "releaseVersion=$RELEASE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Update changelog
         uses: thomaseizinger/keep-a-changelog-new-release@1.3.0
@@ -145,7 +145,7 @@ jobs:
             git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}" && \
             git push origin ${{ github.event.repository.default_branch }}
           
-          echo "::set-output name=releaseCommit::$(git rev-parse HEAD)"
+          echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
           # Bump minor version
           bash version.sh -b minor
@@ -287,7 +287,7 @@ jobs:
           REPOSITORY: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
         run: |
-          echo "::set-output name=imageTag::$IMAGE_TAG"
+          echo "imageTag=$IMAGE_TAG" >> $GITHUB_OUTPUT
           
           # ECR Login
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
