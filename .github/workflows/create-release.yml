@@ -242,7 +242,7 @@ jobs:
     steps:
       - name: Check ENV
         id: check
-        run: echo "::set-output name=ignoreMissing::${{ inputs.ignore-missing-unit-tests }}"
+        run: echo "ignoreMissing=${{ inputs.ignore-missing-unit-tests }}" >> $GITHUB_OUTPUT
 
       - name: Download Artifacts
         id: download
