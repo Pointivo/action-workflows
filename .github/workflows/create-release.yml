@@ -68,6 +68,10 @@ on:
         required: false
         type: string
         default: qa
+      createNewRelease:
+        required: false
+        type: boolean
+        default: true
 
     secrets:
       aws-account-id:
@@ -86,6 +90,7 @@ on:
 
 jobs:
   create-new-release:
+    if: inputs.createNewRelease
     name: "Create a new release"
     runs-on: ubuntu-latest
     outputs:
