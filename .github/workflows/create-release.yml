@@ -68,10 +68,6 @@ on:
         required: false
         type: string
         default: qa
-      createNewRelease:
-        required: false
-        type: boolean
-        default: true
 
     secrets:
       aws-account-id:
@@ -90,7 +86,6 @@ on:
 
 jobs:
   create-new-release:
-    if: inputs.createNewRelease
     name: "Create a new release"
     runs-on: ubuntu-latest
     outputs:
@@ -146,18 +141,26 @@ jobs:
           
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
-          git pull && \
-            git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}" && \
-            git push origin ${{ github.event.repository.default_branch }}
+          for i in {1..3}; 
+            git pull && \
+              git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}" && \
+              git push origin ${{ github.event.repository.default_branch }} && \
+              break || \
+              sleep 10;
+          done
           
           echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
           # Bump minor version
           bash version.sh -b minor
           git add $(bash version.sh -p)
-          git pull && \
-            git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})" && \
-            git push origin ${{ github.event.repository.default_branch }}
+          for i in {1..3}; 
+            git pull && \
+              git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})" && \
+              git push origin ${{ github.event.repository.default_branch }} && \
+              break || \
+              sleep 10;
+          done
 
       - name: Extract Changelog
         run: |
