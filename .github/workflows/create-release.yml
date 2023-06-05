@@ -140,7 +140,7 @@ jobs:
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           
           git status
-          git pull origin ${{ github.event.repository.default_branch }} --rebase
+          git pull origin ${{ github.event.repository.default_branch }}
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
           git status
@@ -152,7 +152,8 @@ jobs:
           
           # Bump minor version
           bash version.sh -b minor
-          git pull origin ${{ github.event.repository.default_branch }} --rebase
+          git status
+          git pull origin ${{ github.event.repository.default_branch }}
           git add $(bash version.sh -p)
           git status
           git pull origin ${{ github.event.repository.default_branch }}
