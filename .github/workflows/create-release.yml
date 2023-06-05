@@ -139,22 +139,24 @@ jobs:
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           
+          git pull origin ${{ github.event.repository.default_branch }} --rebase
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
           git status
-          git pull origin ${{ github.event.repository.default_branch }} --rebase && \
-            git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}" && \
-            git push origin ${{ github.event.repository.default_branch }}
+          git pull origin ${{ github.event.repository.default_branch }}
+          git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
+          git push origin ${{ github.event.repository.default_branch }}
           
           echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
           # Bump minor version
           bash version.sh -b minor
+          git pull origin ${{ github.event.repository.default_branch }} --rebase
           git add $(bash version.sh -p)
           git status
-          git pull origin ${{ github.event.repository.default_branch }} --rebase && \
-            git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})" && \
-            git push origin ${{ github.event.repository.default_branch }}
+          git pull origin ${{ github.event.repository.default_branch }}
+          git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})"
+          git push origin ${{ github.event.repository.default_branch }}
 
       - name: Extract Changelog
         run: |
