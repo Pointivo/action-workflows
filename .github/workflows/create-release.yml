@@ -141,26 +141,20 @@ jobs:
           
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
-          for i in {1..3}; 
-            git pull && \
-              git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}" && \
-              git push origin ${{ github.event.repository.default_branch }} && \
-              break || \
-              sleep 10;
-          done
+          git status
+          git pull && \
+            git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}" && \
+            git push origin ${{ github.event.repository.default_branch }} --force
           
           echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
           # Bump minor version
           bash version.sh -b minor
           git add $(bash version.sh -p)
-          for i in {1..3}; 
-            git pull && \
-              git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})" && \
-              git push origin ${{ github.event.repository.default_branch }} && \
-              break || \
-              sleep 10;
-          done
+          git status
+          git pull && \
+            git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})" && \
+            git push origin ${{ github.event.repository.default_branch }}
 
       - name: Extract Changelog
         run: |
