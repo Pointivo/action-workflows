@@ -139,6 +139,7 @@ jobs:
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           
+          git status
           git pull origin ${{ github.event.repository.default_branch }} --rebase
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
