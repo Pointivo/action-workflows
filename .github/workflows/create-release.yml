@@ -139,7 +139,6 @@ jobs:
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           
-          git status
           git pull origin ${{ github.event.repository.default_branch }}
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
@@ -151,9 +150,8 @@ jobs:
           echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
           # Bump minor version
-          bash version.sh -b minor
-          git status
           git pull origin ${{ github.event.repository.default_branch }}
+          bash version.sh -b minor
           git add $(bash version.sh -p)
           git status
           git pull origin ${{ github.event.repository.default_branch }}
