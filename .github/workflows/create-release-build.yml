@@ -101,7 +101,7 @@ jobs:
         env:
           SEMVER_FILE: ${{ inputs.semverFile }}
         run: |
-          bash version.sh -s ${{ input.releaseVersion }}
+          bash version.sh -s ${{ inputs.releaseVersion }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1-node16
