@@ -15,11 +15,16 @@ on:
       changeLogFile:
         required: true
         type: string
-
     secrets:
       github-token:
         required: true
-
+    outputs:
+      releaseVersion:
+        description: "The updated version of the release branch"
+        value: ${{ jobs.create-new-release.outputs.releaseVersion }}
+      releaseCommit:
+        description: "The commit ref of the newly created release branch"
+        value: ${{ jobs.create-new-release.outputs.releaseCommit }}
 jobs:
   create-new-release:
     name: "Create a new release"
