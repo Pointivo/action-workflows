@@ -113,5 +113,5 @@ jobs:
       - name: Create release branch from tag
         run: |
           git fetch
-          git checkout -b ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }} ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
+          git checkout -B ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }} ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
           git push origin ${{ inputs.imageName }}/release_${{ env.RELEASE_SHORT }}
