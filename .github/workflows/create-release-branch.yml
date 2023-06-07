@@ -76,10 +76,6 @@ jobs:
         env:
           SEMVER_FILE: ${{ inputs.semverFile }}
         run: |
-          # Random delay to prevent mutiple Create actions (between 1-9s twice)
-          sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
-          sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
-          
           git pull origin ${{ github.event.repository.default_branch }}
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
