@@ -33,7 +33,7 @@ on:
         required: true
       ecr-registry:
         required: true
-      eks-qa-cluster:
+      eks-cluster-name:
         required: true
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.eks-region }}
-          cluster_name: ${{ secrets.eks-qa-cluster }}
+          cluster_name: ${{ secrets.eks-cluster-name }}
           args: -n ${{ inputs.k8s-deployment-namespace }} set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
 
       - name: Monitor Rollout
@@ -73,5 +73,5 @@ jobs:
           aws_access_key_id: ${{ secrets.aws-access-key-id }}
           aws_secret_access_key: ${{ secrets.aws-secret-access-key }}
           aws_region: ${{ inputs.eks-region }}
-          cluster_name: ${{ secrets.eks-qa-cluster }}
+          cluster_name: ${{ secrets.eks-cluster-name }}
           args: -n ${{ inputs.k8s-deployment-namespace }} rollout status deployment/${{ env.POD_NAME }} --timeout=10m
