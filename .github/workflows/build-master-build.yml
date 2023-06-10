@@ -1,16 +1,8 @@
-name: Reusable - Create Release (No Branch, Just Build)
+name: Reusable - Build Master
 
 on:
   workflow_call:
     inputs:
-      # From create-release-branch outputs
-      releaseCommit:
-        required: true
-        type: string
-      # From create-release-branch outputs
-      releaseVersion:
-        required: false
-        type: string
       imageName:
         required: true
         type: string
@@ -35,10 +27,6 @@ on:
       releaseStage:
         required: false
         type: string
-      releaseTag:
-        required: false
-        type: string
-        default: release
       extraBuildArgs:
         required: false
         type: string
@@ -72,24 +60,17 @@ on:
 
 jobs:
   build-and-test:
-    name: "Prepare build"
+    name: "Build and Test"
     runs-on: [ self-hosted, ops-pv ]
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.releaseCommit }}
           lfs: true
 
       - name: Checkout LFS objects
         run: git lfs checkout
-
-      - name: Set Release Version
-        env:
-          SEMVER_FILE: ${{ inputs.semverFile }}
-        run: |
-          bash version.sh -s ${{ inputs.releaseVersion }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -132,7 +113,6 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: success() || failure()
-
     steps:
       - name: Check ENV
         id: check
@@ -145,14 +125,16 @@ jobs:
         with:
           name: unit-tests-artifacts
 
-
       - name: Display structure of downloaded files
         run: ls -R
 
       - name: Publish Unit Test Results
+        id: test-results
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: steps.download.outcome == 'success'
         with:
+          root_log_level: DEBUG
+          log_level: DEBUG
           files: |
             *.xml
             ./**/*.xml
@@ -181,23 +163,30 @@ jobs:
           REPOSITORY: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
         run: |
+          echo REGISTRY=$REGISTRY
+          echo IMAGE_TAG=$IMAGE_TAG
+          echo REPOSITORY=$REPOSITORY
+          echo IMAGE_TAG=$IMAGE_TAG
+          BRANCH=${GITHUB_REF#refs/heads/}
+          echo BRANCH=$BRANCH
+          echo "repository=$REPOSITORY" >> $GITHUB_OUTPUT
           echo "imageTag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+          # Move tag
+          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$BRANCH
           
-          # ECR Login
+          # Publish to ECR
+          
           aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
             docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
-
-          # Publish to ECR
-          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-
-          # Move tags
-          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:qa
-          docker push $REGISTRY/$REPOSITORY:qa
-          docker rmi $REGISTRY/$REPOSITORY:qa
           
-          docker rmi $REPOSITORY:$IMAGE_TAG || true
-          docker rmi --force $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          
+          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
+            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
+          
+          docker push $REGISTRY/$REPOSITORY:$BRANCH
 
   cleanup:
     name: "Cleanup docker resources"
