@@ -55,8 +55,12 @@ on:
         required: true
 
     outputs:
-      repository: ${{ jobs.publish-to-ecr.outputs.repository }}
-      imageTag: ${{ jobs.publish-to-ecr.outputs.imageTag }}
+      repository:
+        description: "The ECR repository"
+        value: ${{ jobs.publish-to-ecr.outputs.repository }}
+      imageTag:
+        description: "The tag of the built image"
+        value: ${{ jobs.publish-to-ecr.outputs.imageTag }}
 
 jobs:
   build-and-test:
