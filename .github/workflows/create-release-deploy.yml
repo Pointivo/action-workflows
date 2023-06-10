@@ -1,4 +1,4 @@
-name: Reusable - Create Release (No Branch, Just Build)
+name: Reusable - Deploy Release
 
 on:
   workflow_call:
