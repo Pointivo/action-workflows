@@ -12,11 +12,6 @@ on:
         required: true
         type: string
         default: false
-      # from create-release-build
-      repository:
-        required: true
-        type: string
-        default: false
       eks-region:
         required: false
         type: string
@@ -44,7 +39,7 @@ jobs:
       - name: Get Variables
         env:
           REGISTRY: ${{ secrets.ecr-registry }}
-          REPOSITORY: ${{ inputs.repository }}
+          REPOSITORY: ${{ inputs.imageName }}
           POD_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ inputs.imageTag }}
         run: |
