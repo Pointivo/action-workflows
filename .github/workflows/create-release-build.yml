@@ -67,9 +67,6 @@ on:
         required: true
 
     outputs:
-      repository:
-        description: "The ECR repository"
-        value: ${{ jobs.publish-to-ecr.outputs.repository }}
       imageTag:
         description: "The tag of the built image"
         value: ${{ jobs.publish-to-ecr.outputs.imageTag }}
@@ -168,7 +165,6 @@ jobs:
     runs-on: [ self-hosted, ops-pv ]
     if: success()
     outputs:
-      repository: ${{ steps.push.outputs.repository }}
       imageTag: ${{ steps.push.outputs.imageTag }}
     steps:
       - name: Configure AWS credentials
