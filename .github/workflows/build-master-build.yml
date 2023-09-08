@@ -53,6 +53,8 @@ on:
         required: true
       ecr-registry:
         required: true
+      slack-webhook-url:
+        required: false
 
     outputs:
       repository:
@@ -194,7 +196,7 @@ jobs:
 
   cleanup:
     name: "Cleanup docker resources"
-    needs: [publish-to-ecr, build-and-test]
+    needs: [ publish-to-ecr, build-and-test ]
     runs-on: [ self-hosted, ops-pv ]
     if: success() || failure()
 
@@ -207,11 +209,14 @@ jobs:
 
   slack-notification:
     name: Slack Notification
-    if: always()
     needs: [ build-and-test ]
     runs-on: ubuntu-latest
     steps:
       - name: Slack workflow notification pix4d-gui-01sdk-build
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        if: ${{ env.SLACK_WEBHOOK_URL ~= '' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
           payload: |
@@ -227,6 +232,3 @@ jobs:
                 }
               ]
             }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
