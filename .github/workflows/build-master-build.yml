@@ -53,8 +53,6 @@ on:
         required: true
       ecr-registry:
         required: true
-      slack-webhook-url:
-        required: false
 
     outputs:
       repository:
