@@ -268,7 +268,8 @@ jobs:
 
   slack-notification:
     name: "Slack Notification"
-    needs: [ cleanup ]
+    needs: [ publish-to-ecr, build-and-test ]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Slack workflow notification
@@ -279,13 +280,13 @@ jobs:
         with:
           payload: |
             {
-              "text": "inputs.imageName for <${{github.ref_name}}> build status: ${{ needs.call.status }}",
+              "text": "inputs.imageName for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.status && needs.build-and-test.status }}",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ inputs.imageName }} build for <${{github.ref_name}}> was: ${{ needs.call.result }}\n PR or Commit:[Link](${{ github.event.pull_request.html_url || github.event.head_commit.url }}) by: ${{ github.event.pull_request.user.login || github.actor }}"
+                    "text": "${{ inputs.imageName }} build for <${{github.ref_name}}> was: ${{ needs.cleanup.result }}\n PR or Commit:[Link](${{ github.event.pull_request.html_url || github.event.head_commit.url }}) by: ${{ github.event.pull_request.user.login || github.actor }}"
                   }
                 }
               ]
