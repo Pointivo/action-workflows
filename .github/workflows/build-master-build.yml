@@ -204,3 +204,29 @@ jobs:
         env:
           IMAGE_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
+
+  slack-notification:
+    name: Slack Notification
+    if: always()
+    needs: [ build-and-test ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack workflow notification pix4d-gui-01sdk-build
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "inputs.imageName for <${{github.ref_name}}> build status: ${{ needs.call.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ inputs.imageName }} build for <${{github.ref_name}}> was: ${{ needs.call.result }}\n PR or Commit:[Link](${{ github.event.pull_request.html_url || github.event.head_commit.url }}) by: ${{ github.event.pull_request.user.login || github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
