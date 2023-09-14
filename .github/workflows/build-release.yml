@@ -65,6 +65,8 @@ on:
         required: true
       github-token:
         required: true
+      slack-webhook-url:
+        required: false
 
 
 jobs:
@@ -201,7 +203,7 @@ jobs:
 
   cleanup:
     name: "Cleanup docker resources"
-    needs: [publish-to-ecr, build-and-test]
+    needs: [ publish-to-ecr, build-and-test ]
     runs-on: [ self-hosted, ops-pv ]
     if: success() || failure()
 
@@ -272,3 +274,29 @@ jobs:
           draft: false
           prerelease: false
           body_path: CHANGELOG_RELEASE.md
+
+  slack-notification:
+    name: "Slack Notification"
+    needs: [ publish-to-ecr, build-and-test ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack workflow notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "${{ inputs.imageName }} for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ inputs.imageName }} build status for branch <${{github.ref_name}}> was: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }} (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Open>)"
+                  }
+                }
+              ]
+            }
