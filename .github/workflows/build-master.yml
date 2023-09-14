@@ -79,6 +79,9 @@ on:
         required: true
       eks-cluster-name:
         required: true
+      slack-webhook-url:
+        required: false
+
 
 
 jobs:
@@ -274,13 +277,13 @@ jobs:
     steps:
       - name: Slack workflow notification
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
         uses: slackapi/slack-github-action@v1.23.0
         with:
           payload: |
             {
-              "text": "inputs.imageName for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.status && needs.build-and-test.status }}",
+              "text": "${{ inputs.imageName }} for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.status && needs.build-and-test.status }}",
               "blocks": [
                 {
                   "type": "section",
