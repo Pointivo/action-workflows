@@ -283,13 +283,13 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ inputs.imageName }} for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.status && needs.build-and-test.status }}",
+              "text": "${{ inputs.imageName }} for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }}",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ inputs.imageName }} build for branch <${{github.ref_name}}> was: ${{ needs.publish-to-ecr.status && needs.build-and-test.status }}\n PR or Commit:<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Link> by: ${{ github.event.pull_request.user.login || github.actor }}"
+                    "text": "${{ inputs.imageName }} build for branch <${{github.ref_name}}> was: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }} (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Open>) by: ${{ github.event.pull_request.user.login || github.actor }}"
                   }
                 }
               ]
