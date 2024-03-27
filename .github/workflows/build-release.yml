@@ -131,6 +131,7 @@ jobs:
           name: unit-tests-artifacts
           path: build/artifacts/
           if-no-files-found: warn
+          overwrite: 'true'
 
   publish-test-results:
     name: "Publish Unit Tests Results"
