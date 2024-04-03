@@ -33,7 +33,7 @@ jobs:
       releaseVersion: ${{ steps.version.outputs.releaseVersion }}
       releaseCommit: ${{ steps.make-commit.outputs.releaseCommit }}
     container:
-      image: ghcr.io/pointivo/devops
+      image: ghcr.io/pointivo/devops-docker
     steps:
       - uses: actions/checkout@v4
         with:
