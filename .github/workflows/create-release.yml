@@ -122,6 +122,8 @@ jobs:
 
       - name: Update changelog
         uses: thomaseizinger/keep-a-changelog-new-release@2.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.github-token }}
         with:
           version: ${{ env.RELEASE_VERSION }}
           changelogPath: ${{ inputs.changeLogFile }}
