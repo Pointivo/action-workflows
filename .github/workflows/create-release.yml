@@ -165,16 +165,12 @@ jobs:
           sed -n '/## \[${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}\]/,/## \[/p' ${{ inputs.changeLogFile }} | tail -n +2 | sed '$d' > CHANGELOG_RELEASE.md
 
       - name: Create Release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.github-token }}
-        with:
-          commitish: ${{ steps.make-commit.outputs.releaseCommit }}
-          tag_name: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
-          release_name: v${{ env.RELEASE_VERSION }} - ${{ inputs.imageName }}
-          draft: false
-          prerelease: false
-          body_path: CHANGELOG_RELEASE.md
+        run: gh release create ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
+          --title "v${{ env.RELEASE_VERSION }} - ${{ inputs.imageName }}"
+          --notes-file CHANGELOG_RELEASE.md
+          --target ${{ steps.make-commit.outputs.releaseCommit }}
 
       - name: Create release branch from tag
         run: |
