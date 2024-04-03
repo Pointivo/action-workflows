@@ -121,7 +121,7 @@ jobs:
           echo "releaseVersion=$RELEASE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Update changelog
-        uses: thomaseizinger/keep-a-changelog-new-release@2.0.0
+        uses: thomaseizinger/keep-a-changelog-new-release@1.0.0
         with:
           version: ${{ env.RELEASE_VERSION }}
           changelogPath: ${{ inputs.changeLogFile }}
@@ -369,10 +369,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Slack workflow notification
+        uses: slackapi/slack-github-action@v1.25.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        uses: slackapi/slack-github-action@v1.25.0
         with:
           payload: |
             {
