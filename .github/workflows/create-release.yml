@@ -121,9 +121,6 @@ jobs:
           echo "RELEASE_SHORT=${RELEASE_SHORT}" >> $GITHUB_ENV
           echo "releaseVersion=$RELEASE_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Print Revision List
-        run: git rev-list --max-parents=0 HEAD
-
       - name: Update changelog
         uses: thomaseizinger/keep-a-changelog-new-release@2.0.0
         env:
