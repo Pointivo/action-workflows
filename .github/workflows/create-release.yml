@@ -123,9 +123,10 @@ jobs:
 
       - name: Initialize mandatory git config
         run: |
-          echo "gitVersion=$(git --version)" >> $GITHUB_OUTPUT
           git config user.name "GitHub actions"
           git config user.email noreply@github.com
+          git --version
+          git rev-list --max-parents=0 HEAD
 
       - name: Update changelog
         uses: thomaseizinger/keep-a-changelog-new-release@2.0.0
