@@ -375,8 +375,19 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Check for Secret availability
+        id: secret-check
+        # perform secret check & put boolean result as an output
+        shell: bash
+        run: |
+          if [ "${{ secrets.slack-webhook-url }}" != '' ]; then
+          echo "available=true" >> $GITHUB_OUTPUT;
+          else
+          echo "available=false" >> $GITHUB_OUTPUT;
+          fi
       - name: Slack workflow notification
-        uses: slackapi/slack-github-action@v1.23.0
+        if: ${{ steps.secret-check.outputs.available == 'true' }}
+        uses: slackapi/slack-github-action@v1.25.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
