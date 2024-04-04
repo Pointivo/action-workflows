@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build-and-test, publish-to-ecr ]
     container:
-      image: ghcr.io/pointivo/devops
+      image: ghcr.io/pointivo/devops-docker
     steps:
       - uses: actions/checkout@v4
         with:
