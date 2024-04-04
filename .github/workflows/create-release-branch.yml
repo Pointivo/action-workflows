@@ -40,6 +40,12 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 1
 
+      - name: Initialize mandatory git config
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "GitHub actions"
+          git config user.email noreply@github.com
+
       - name: Set Release Version
         if: inputs.releaseVersion != ''
         env:
@@ -65,11 +71,6 @@ jobs:
           version: ${{ env.RELEASE_VERSION }}
           changelogPath: ${{ inputs.changeLogFile }}
           tag: ${{ env.RELEASE_VERSION }}-${{ inputs.imageName }}
-
-      - name: Initialize mandatory git config
-        run: |
-          git config user.name "GitHub actions"
-          git config user.email noreply@github.com
 
       - name: Commit changelog and bump Master
         id: make-commit
