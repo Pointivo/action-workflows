@@ -211,7 +211,7 @@ jobs:
   slack-notification:
     name: "Slack Notification"
     needs: [ publish-to-ecr, build-and-test ]
-    if: always()
+    if: failure()
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
