@@ -82,8 +82,6 @@ on:
       slack-webhook-url:
         required: false
 
-
-
 jobs:
   build-and-test:
     name: "Build and Test"
@@ -275,6 +273,7 @@ jobs:
     needs: [ publish-to-ecr, build-and-test ]
     if: always()
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Slack workflow notification
         uses: slackapi/slack-github-action@v1.25.0
