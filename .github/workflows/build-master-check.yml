@@ -53,16 +53,6 @@ on:
         required: true
       ecr-registry:
         required: true
-      slack-webhook-url:
-        required: false
-
-    outputs:
-      repository:
-        description: "The ECR repository"
-        value: ${{ jobs.publish-to-ecr.outputs.repository }}
-      imageTag:
-        description: "The tag of the built image"
-        value: ${{ jobs.publish-to-ecr.outputs.imageTag }}
 
 jobs:
   build-and-test:
@@ -147,57 +137,9 @@ jobs:
             ./**/*.xml
             !**_cov.xml
 
-  publish-to-ecr:
-    name: "Publish Image to ECR"
-    needs: build-and-test
-    runs-on: [ self-hosted, ops-pv ]
-    if: success()
-    outputs:
-      repository: ${{ steps.push.outputs.repository }}
-      imageTag: ${{ steps.push.outputs.imageTag }}
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ inputs.ecr-region }}
-
-      - name: Tag and push image to Amazon ECR
-        id: push
-        env:
-          REGISTRY: ${{ secrets.ecr-registry }}
-          REPOSITORY: ${{ inputs.imageName }}
-          IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
-        run: |
-          echo REGISTRY=$REGISTRY
-          echo IMAGE_TAG=$IMAGE_TAG
-          echo REPOSITORY=$REPOSITORY
-          echo IMAGE_TAG=$IMAGE_TAG
-          BRANCH=${GITHUB_REF#refs/heads/}
-          echo BRANCH=$BRANCH
-          echo "repository=$REPOSITORY" >> $GITHUB_OUTPUT
-          echo "imageTag=$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-          # Move tag
-          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$BRANCH
-          
-          # Publish to ECR
-          
-          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
-            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
-          
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          
-          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
-            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
-          
-          docker push $REGISTRY/$REPOSITORY:$BRANCH
-
   cleanup:
     name: "Cleanup docker resources"
-    needs: [ publish-to-ecr, build-and-test ]
+    needs: [ build-and-test ]
     runs-on: [ self-hosted, ops-pv ]
     if: success() || failure()
 
@@ -207,30 +149,3 @@ jobs:
         env:
           IMAGE_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
-
-  slack-notification:
-    name: "Slack Notification"
-    needs: [ publish-to-ecr, build-and-test ]
-    if: failure()
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Slack workflow notification
-        uses: slackapi/slack-github-action@v1.25.0
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        with:
-          payload: |
-            {
-              "text": "${{ inputs.imageName }} for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "${{ inputs.imageName }} build status for branch <${{github.ref_name}}> was: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }} (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Open>)"
-                  }
-                }
-              ]
-            }
