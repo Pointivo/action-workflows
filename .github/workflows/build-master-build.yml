@@ -45,6 +45,10 @@ on:
         required: false
         type: string
         default: us-east-1
+      publish:
+        required: false
+        type: boolean
+        default: true
 
     secrets:
       aws-access-key-id:
@@ -151,7 +155,7 @@ jobs:
     name: "Publish Image to ECR"
     needs: build-and-test
     runs-on: [ self-hosted, ops-pv ]
-    if: success()
+    if: success() && inputs.publish
     outputs:
       repository: ${{ steps.push.outputs.repository }}
       imageTag: ${{ steps.push.outputs.imageTag }}
