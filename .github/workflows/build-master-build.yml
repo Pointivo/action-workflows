@@ -18,6 +18,10 @@ on:
       pullImages:
         required: false
         type: string
+      checkout:
+        required: false
+        type: boolean
+        default: true
       cachedStages:
         required: false
         type: string
@@ -72,11 +76,9 @@ jobs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
       - uses: actions/checkout@v4
+        if: inputs.checkout
         with:
           lfs: true
-
-      - name: Checkout LFS objects
-        run: git lfs checkout
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

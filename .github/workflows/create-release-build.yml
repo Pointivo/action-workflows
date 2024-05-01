@@ -83,9 +83,6 @@ jobs:
           ref: ${{ inputs.releaseCommit }}
           lfs: true
 
-      - name: Checkout LFS objects
-        run: git lfs checkout
-
       - name: Set Release Version
         env:
           SEMVER_FILE: ${{ inputs.semverFile }}

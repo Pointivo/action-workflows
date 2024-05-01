@@ -81,9 +81,6 @@ jobs:
         with:
           lfs: true
 
-      - name: Checkout LFS objects
-        run: git lfs checkout
-
       - name: Bump (Patch) version
         id: version
         env:
