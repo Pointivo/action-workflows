@@ -56,6 +56,7 @@ jobs:
           echo "POD_NAME=${POD_NAME}" >> $GITHUB_ENV
 
       - name: Promote to Master
+        id: promote-master
         uses: ianbelcher/eks-kubectl-action@master
         if: inputs.imageName != 'rabbit-pod-autoscaler'
         with:
@@ -64,6 +65,8 @@ jobs:
           aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-cluster-name }}
           args: -n ${{ inputs.k8s-deployment-namespace }} set image deployment/${{ env.POD_NAME }} ${{ env.POD_NAME }}=${{ env.IMAGE_URL }}
+      - name: Promote to Master Output
+        run: echo "${{ steps.promote-master.outputs.kubectl-out }}"
 
       - name: Monitor Rollout
         uses: ianbelcher/eks-kubectl-action@master
