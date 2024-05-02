@@ -155,8 +155,6 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: steps.download.outcome == 'success'
         with:
-          root_log_level: DEBUG
-          log_level: DEBUG
           files: |
             *.xml
             ./**/*.xml
