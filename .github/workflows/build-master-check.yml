@@ -1,4 +1,4 @@
-name: Reusable - Build Master
+name: Reusable - Build Master and Check
 
 on:
   workflow_call:
@@ -53,6 +53,8 @@ on:
         required: true
       ecr-registry:
         required: true
+      slack-webhook-url:
+        required: false
 
 jobs:
   build-and-test:
@@ -144,3 +146,29 @@ jobs:
         env:
           IMAGE_NAME: ${{ inputs.imageName }}
           IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
+
+  slack-notification:
+    name: "Slack Notification"
+    needs: [ publish-to-ecr, build-and-test ]
+    if: always()
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Slack workflow notification
+        uses: slackapi/slack-github-action@v1.25.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ inputs.imageName }} build-check status for branch <${{github.ref_name}}> was: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }} (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Open>)"
+                  }
+                }
+              ]
+            }
