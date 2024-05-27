@@ -59,7 +59,7 @@ on:
 jobs:
   build-and-test:
     name: "Build and Test"
-    runs-on: [ self-hosted, ops-pv ]
+    runs-on: [ ops-pv-test ]
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
