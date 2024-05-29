@@ -45,6 +45,10 @@ on:
         required: false
         type: string
         default: us-east-1
+      runner:
+        required: false
+        type: string
+        default: ops-pv-test
 
     secrets:
       aws-access-key-id:
@@ -59,7 +63,7 @@ on:
 jobs:
   build-and-test:
     name: "Build and Test"
-    runs-on: [ ops-pv-test ]
+    runs-on: ${{ inputs.runner }}
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
