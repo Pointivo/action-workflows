@@ -154,7 +154,7 @@ jobs:
   slack-notification:
     name: "Slack Notification"
     needs: [ build-and-test ]
-    if: secrets.slack-webhook-url != ''
+    if: ${{ secrets.slack-webhook-url != '' }}
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
