@@ -66,6 +66,8 @@ jobs:
     runs-on: ${{ inputs.runner }}
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -154,7 +156,7 @@ jobs:
   slack-notification:
     name: "Slack Notification"
     needs: [ build-and-test ]
-    if: ${{ secrets.slack-webhook-url != '' }}
+    if: ${{ SLACK_WEBHOOK_URL }}
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
