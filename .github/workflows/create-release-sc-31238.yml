@@ -94,15 +94,18 @@ jobs:
   create-new-release:
     name: "Create a new release"
     runs-on: ubuntu-latest
+    env:
+      PV_SOURCE_BRANCH: ${{ inputs.sourceBranch == '' && github.event.repository.default_branch || inputs.sourceBranch }}
     outputs:
       releaseVersion: ${{ steps.version.outputs.releaseVersion }}
       releaseCommit: ${{ steps.make-commit.outputs.releaseCommit }}
+      sourceBranch: ${{ env.PV_SOURCE_BRANCH }}
     container:
       image: ghcr.io/pointivo/devops
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.sourceBranch == '' && github.event.repository.default_branch || inputs.sourceBranch }}
+          ref: ${{ env.PV_SOURCE_BRANCH }}
           fetch-depth: 1
 
       - name: Initialize mandatory git config
@@ -146,24 +149,24 @@ jobs:
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           sleep $(grep -m1 -ao '[1-9]' /dev/urandom | head -n1) 
           
-          git pull origin ${{ github.event.repository.default_branch }}
+          git pull origin ${{ env.PV_SOURCE_BRANCH }}
           git add ${{ inputs.changeLogFile }}
           git add $(bash version.sh -p)
           git status
-          git pull origin ${{ github.event.repository.default_branch }}
+          git pull origin ${{ env.PV_SOURCE_BRANCH }}
           git commit --message "Create release - ${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
-          git push origin ${{ github.event.repository.default_branch }}
+          git push origin ${{ env.PV_SOURCE_BRANCH }}
           
           echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
           # Bump minor version
-          git pull origin ${{ github.event.repository.default_branch }}
+          git pull origin ${{ env.PV_SOURCE_BRANCH }}
           bash version.sh -b minor
           git add $(bash version.sh -p)
           git status
-          git pull origin ${{ github.event.repository.default_branch }}
+          git pull origin ${{ env.PV_SOURCE_BRANCH }}
           git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})"
-          git push origin ${{ github.event.repository.default_branch }}
+          git push origin ${{ env.PV_SOURCE_BRANCH }}
 
       - name: Extract Changelog
         run: |
