@@ -152,6 +152,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: steps.download.outcome == 'success'
         with:
+          action_fail: true
           files: |
             *.xml
             ./**/*.xml
