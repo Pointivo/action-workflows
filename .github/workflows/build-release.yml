@@ -242,7 +242,7 @@ jobs:
           bash version.sh -s $RELEASE_VERSION
 
       - name: Update changelog
-        uses: thomaseizinger/keep-a-changelog-new-release@2.0.0
+        uses: thomaseizinger/keep-a-changelog-new-release@v3
         with:
           version: ${{ env.RELEASE_VERSION }}
           changelogPath: ${{ inputs.changelogFile }}
