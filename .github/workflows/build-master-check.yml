@@ -154,7 +154,7 @@ jobs:
 
   slack-notification:
     name: "Slack Notification"
-    needs: [ build-and-test ]
+    needs: [ build-and-test, publish-test-results ]
     if: always()
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -173,7 +173,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ inputs.imageName }} build-check status for branch <${{github.head_ref}}> was: ${{ needs.build-and-test.result }} (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Open>)"
+                    "text": "${{ inputs.imageName }} build-check status for branch <${{github.head_ref}}> was: ${{ needs.build-and-test.result && needs.publish-test-results.result }} (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Open>)"
                   }
                 }
               ]
