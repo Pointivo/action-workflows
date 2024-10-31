@@ -19,6 +19,9 @@ on:
         required: false
         type: string
       # Not Required
+      sourceMapPath:
+        required: false
+        type: string
       skipPromotion:
         required: false
         type: boolean
