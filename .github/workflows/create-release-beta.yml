@@ -26,6 +26,9 @@ on:
         required: true
         type: string
       # Not Required
+      sourceMapPath:
+        required: false
+        type: string
       skipPromotion:
         required: false
         type: boolean
@@ -236,6 +239,7 @@ jobs:
           pullImages: ${{ inputs.pullImages }}
           extraBuildArgs: ${{ inputs.extraBuildArgs }}
           testPath: ${{ inputs.testPath }}
+          sourceMapPath: ${{ inputs.sourceMapPath }}
           buildStatusPath: ${{ inputs.buildStatusPath }}
           releaseTag: ${{ inputs.releaseTag }}
           buildStage: ${{ inputs.buildStage }}
