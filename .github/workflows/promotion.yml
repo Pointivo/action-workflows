@@ -46,6 +46,8 @@ on:
         required: false
       source-ecr-registry:
         required: false
+      shortcut-api-token:
+        required: false
 
 jobs:
   check-env:

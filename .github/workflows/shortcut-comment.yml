@@ -1,0 +1,25 @@
+name: Reusable - Shortcut Comment
+on:
+  workflow_call:
+    inputs:
+      storyId: # 12345 or sc-12345
+        required: true
+        type: string
+      comment:
+        required: true
+        type: string
+    secrets:
+      shortcut-api-token:
+        required: true
+jobs:
+  shortcut-comment:
+    name: "Shortcut Comment"
+    runs-on: [ self-hosted, ops-pv ]
+    steps:
+      - run: |
+          NORMALIZED_STORY_ID=$(echo ${{ inputs.storyId }} | sed 's/\(sc-\)\?\([0-9]\+\)/\2/g' )
+          curl -X POST \
+          -H "Content-Type: application/json" \
+          -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
+          -d '{ "text": "${{ inputs.comment }}" }' \
+          -L "https://api.app.shortcut.com/api/v3/stories/${NORMALIZED_STORY_ID}/comments"
