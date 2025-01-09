@@ -277,7 +277,8 @@ jobs:
     with:
       imageTag: ${{ needs.build-and-test.outputs.imageTag }}
       imageName: ${{ inputs.imageName }}
-    secrets: inherit
+    secrets:
+      shortcut-api-token: ${{ secrets.shortcut-api-token }}
 
   slack-notification:
     name: "Slack Notification"
