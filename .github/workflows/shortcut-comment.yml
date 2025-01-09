@@ -8,9 +8,7 @@ on:
       comment:
         required: true
         type: string
-    secrets:
-      shortcut-api-token:
-        required: true
+    secrets: inherit
 jobs:
   shortcut-comment:
     name: "Shortcut Comment"

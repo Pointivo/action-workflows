@@ -1,0 +1,45 @@
+name: Reusable - Build Master Shortcut Comment
+on:
+  workflow_call:
+    inputs:
+      imageName:
+        required: true
+        type: string
+      imageTag:
+        required: true
+        type: string
+    secrets: inherit
+jobs:
+  build-inputs:
+    name: "Build inputs to Shortcut Commenter"
+    runs-on: [ self-hosted, ops-pv ]
+    env:
+      MESSAGE: ${{ github.event.head_commit.message }}
+    outputs:
+      STORY_ID: ${{ steps.parse.outputs.STORY_ID }}
+      COMMENT: ${{ steps.build-comment.outputs.COMMENT }}
+    steps:
+      - id: parse
+        run: |
+          story_id=$(echo ${{ env.MESSAGE }} | sed 's/\[sc-\([0-9]\+\).*/\1/g')
+          if [[ -n "${story_id}" ]]; then
+            echo "STORY_ID=${story_id}" >> $GITHUB_OUTPUT
+          else
+            echo "No Shortcut story could be parsed from ${{ env.MESSAGE }}" 1>&2
+            exit 1
+          fi
+      - id: build-comment
+        run: |
+          num=$(echo "${{ inputs.imageTag }}" | sed 's/.*GH\([0-9]\+\)\..*/\1/g')
+          href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          comment="Included in master build [#${num}](${href}) Version: \`${{ inputs.imageName }}:${{ inputs.imageTag }}\`"
+          echo "COMMENT=${comment}" >> $GITHUB_OUTPUT
+  commit-comment:
+    name: "Add Comment to Shortcut Story"
+    needs: [ build-inputs ]
+    uses: .github/workflows/shortcut-comment.yml
+    with:
+      storyId: ${{ needs.build-inputs.outputs.STORY_ID }}
+      comment: ${{ needs.build-inputs.outputs.COMMENT }}
+    secrets:
+      shortcut-api-token: ${{ secrets.shortcut-api-token }}
