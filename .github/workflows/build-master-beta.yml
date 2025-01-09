@@ -82,7 +82,7 @@ on:
       slack-webhook-url:
         required: false
       shortcut-api-token:
-        required: false
+        required: true
 
 jobs:
   build-and-test:
@@ -271,7 +271,6 @@ jobs:
     needs: [ build-and-test, deploy-to-k8s-master ]
     uses: pointivo/action-workflows/.github/workflows/build-master-shortcut-comment.yml@main
     if: |
-      secrets.shortcut-api-token != '' &&
       needs.build-and-test.result == 'success' &&
       (
         needs.deploy-to-k8s-master.result == 'success' ||
