@@ -65,7 +65,7 @@ on:
         required: false
         type: string
         default: master
-      enable-shortcut:
+      enable-shortcut: # temporary
         required: false
         type: boolean
         default: false
