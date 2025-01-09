@@ -65,6 +65,10 @@ on:
         required: false
         type: string
         default: master
+      enable-shortcut:
+        required: false
+        type: boolean
+        default: false
 
     secrets:
       aws-account-id:
@@ -80,6 +84,8 @@ on:
       eks-cluster-name:
         required: true
       slack-webhook-url:
+        required: false
+      shortcut-api-token:
         required: false
 
 jobs:
@@ -214,7 +220,6 @@ jobs:
     needs: [ publish-to-ecr, build-and-test ]
     runs-on: [ self-hosted, ops-pv ]
     if: success() || failure()
-
     steps:
       - name: Cleanup
         uses: pointivo/action-cleanup@master
@@ -263,6 +268,16 @@ jobs:
           aws_region: ${{ inputs.eks-region }}
           cluster_name: ${{ secrets.eks-cluster-name }}
           args: -n ${{ inputs.k8s-deployment-namespace }} rollout status deployment/${{ env.POD_NAME }} --timeout=10m
+
+  commit-comment:
+    name: "Add Comment to Shortcut Story"
+    needs: [ build-and-test, publish-to-ecr ]
+    if: inputs.enable-shortcut
+    uses: pointivo/action-workflows/.github/workflows/build-master-shortcut-comment.yml@main
+    with:
+      imageTag: ${{ needs.build-and-test.outputs.imageTag }}
+      imageName: ${{ inputs.imageName }}
+    secrets: inherit
 
   slack-notification:
     name: "Slack Notification"
