@@ -268,14 +268,8 @@ jobs:
 
   commit-comment:
     name: "Add Comment to Shortcut Story"
-    needs: [ build-and-test, deploy-to-k8s-master ]
+    needs: [ build-and-test, publish-to-ecr ]
     uses: pointivo/action-workflows/.github/workflows/build-master-shortcut-comment.yml@main
-    if: |
-      needs.build-and-test.result == 'success' &&
-      (
-        needs.deploy-to-k8s-master.result == 'success' ||
-        needs.deploy-to-k8s-master.result == 'skipped'
-      )
     with:
       imageTag: ${{ needs.build-and-test.outputs.imageTag }}
       imageName: ${{ inputs.imageName }}
