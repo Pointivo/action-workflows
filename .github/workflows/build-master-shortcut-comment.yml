@@ -8,7 +8,9 @@ on:
       imageTag:
         required: true
         type: string
-    secrets: inherit
+    secrets:
+      shortcut-api-token:
+        required: true
 jobs:
   build-inputs:
     name: "Build inputs to Shortcut Commenter"
