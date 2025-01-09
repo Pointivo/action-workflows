@@ -272,7 +272,7 @@ jobs:
   commit-comment:
     name: "Add Comment to Shortcut Story"
     needs: [ build-and-test, publish-to-ecr ]
-    if: inputs.enable-shortcut
+    if: github.event_name == 'push' && inputs.enable-shortcut
     uses: pointivo/action-workflows/.github/workflows/build-master-shortcut-comment.yml@main
     with:
       imageTag: ${{ needs.build-and-test.outputs.imageTag }}
