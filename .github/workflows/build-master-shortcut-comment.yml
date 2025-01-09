@@ -37,7 +37,7 @@ jobs:
   commit-comment:
     name: "Add Comment to Shortcut Story"
     needs: [ build-inputs ]
-    uses: .github/workflows/shortcut-comment.yml
+    uses: pointivo/action-workflows/.github/workflows/shortcut-comment.yml@main
     with:
       storyId: ${{ needs.build-inputs.outputs.STORY_ID }}
       comment: ${{ needs.build-inputs.outputs.COMMENT }}

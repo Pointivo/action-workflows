@@ -269,7 +269,7 @@ jobs:
   commit-comment:
     name: "Add Comment to Shortcut Story"
     needs: [ build-and-test, deploy-to-k8s-master ]
-    uses: .github/workflows/build-master-shortcut-comment.yml
+    uses: pointivo/action-workflows/.github/workflows/build-master-shortcut-comment.yml@main
     if: |
       secrets.shortcut-api-token != '' &&
       needs.build-and-test.result == 'success' &&
