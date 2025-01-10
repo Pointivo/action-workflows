@@ -35,7 +35,7 @@ jobs:
         run: |
           num=$(echo "${{ inputs.imageTag }}" | sed 's/.*GH\([0-9]\+\)\..*/\1/g')
           href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          comment="Included in master build [#${num}](${href}) Version: \`${{ inputs.imageName }}:${{ inputs.imageTag }}\`"
+          comment="Included in master build [#${num}](${href})\nVersion: \`${{ inputs.imageName }}:${{ inputs.imageTag }}\`"
           echo "COMMENT=${comment}" >> $GITHUB_OUTPUT
   commit-comment:
     name: "Add Comment to Shortcut Story"
