@@ -17,9 +17,10 @@ jobs:
     runs-on: [ self-hosted, ops-pv ]
     steps:
       - run: |
-          NORMALIZED_STORY_ID=$(echo ${{ inputs.storyId }} | sed 's/\(sc-\)\?\([0-9]\+\)/\2/g' )
+          normalized_story_id=$(echo ${{ inputs.storyId }} | sed 's/\(sc-\)\?\([0-9]\+\)/\2/g' )
+          text=$(echo "${{ toJSON(inputs.comment) }}" | sed 's/\\\\n/\\n/g' )
           curl -X POST \
           -H "Content-Type: application/json" \
           -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
-          -d '{ "text": ${{ toJSON(inputs.comment) }} }' \
-          -L "https://api.app.shortcut.com/api/v3/stories/${NORMALIZED_STORY_ID}/comments"
+          -d "{ \"text\": ${text}" \
+          -L "https://api.app.shortcut.com/api/v3/stories/${normalized_story_id}/comments"
