@@ -22,5 +22,5 @@ jobs:
           curl -X POST \
           -H "Content-Type: application/json" \
           -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
-          -d "{ \"text\": ${text}" \
+          -d "{ \"text\": \"${text}\"" \
           -L "https://api.app.shortcut.com/api/v3/stories/${normalized_story_id}/comments"
