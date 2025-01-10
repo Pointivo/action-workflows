@@ -18,7 +18,7 @@ jobs:
     steps:
       - run: |
           normalized_story_id=$(echo ${{ inputs.storyId }} | sed 's/\(sc-\)\?\([0-9]\+\)/\2/g' )
-          text=$(echo "${{ toJSON(inputs.comment) }}" | sed 's/\\\\n/\\n/g' )
+          text=$(echo '${{ toJSON(inputs.comment) }}' | sed 's/\\\\n/\\n/g' )
           curl -X POST \
           -H "Content-Type: application/json" \
           -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
