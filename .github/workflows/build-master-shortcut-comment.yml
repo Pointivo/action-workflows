@@ -24,7 +24,7 @@ jobs:
     steps:
       - id: parse
         run: |
-          story_id=$(echo "${{ env.MESSAGE }}" | sed 's/.*sc-\([0-9]\+\).*/\1/g')
+          story_id=$(echo "${{ env.MESSAGE }}" | head -n 1 | sed 's/.*sc-\([0-9]\+\).*/\1/g')
           if [[ -n "${story_id}" ]]; then
             echo "STORY_ID=${story_id}" >> $GITHUB_OUTPUT
           else
