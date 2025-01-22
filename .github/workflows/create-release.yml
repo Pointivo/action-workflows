@@ -314,6 +314,14 @@ jobs:
           docker rmi $REPOSITORY:$IMAGE_TAG || true
           docker rmi --force $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
+  label-shortcut:
+    name: "Add Release Label to Shortcut Stories"
+    needs: [ publish-to-ecr ]
+    uses: pointivo/action-workflows/.github/workflows/create-release-shortcut.yml@main
+    with:
+      imageTag: ${{ needs.publish-to-ecr.outputs.imageTag }}
+    secrets: inherit
+
   deploy-to-k8s-qa:
     name: "Deploy to K8s-QA"
     needs: [ publish-to-ecr, create-new-release ]

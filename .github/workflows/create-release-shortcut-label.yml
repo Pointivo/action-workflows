@@ -1,4 +1,4 @@
-name: Reusable - Create Release Shortcut Tag
+name: Reusable - Create Release Shortcut Label
 on:
   workflow_call:
     inputs:
