@@ -36,29 +36,44 @@ jobs:
       - id: find-stories
         name: Find shortcut stories
         run: |
+          set -x
+          set -v
+          
+          log=$(git log --pretty=oneline ${{ inputs.releaseCommit }})
+          echo "full log:"
+          echo "${log}"
+          
           prev_release_commit=$( \
-            git log --pretty=oneline ${{ inputs.releaseCommit }} \
+            echo "${log}" \
             | grep 'Create release - ${{ inputs.imageName}}' \
             | head -n 1 \
             | awk '{ print $1 }' \
           )
           
+          release_log=$(git log --pretty=oneline ${{ inputs.releaseCommit }}...${prev_release_commit})
+          echo "release_log:"
+          echo "${release_log}"
+          
           stories=$( \
-            git log --pretty=oneline ${{ inputs.releaseCommit }}...$prev_release_commit \
+            echo "${release_log}"
             | grep 'sc-[0-9]' \
             | sed 's/.*sc-\([0-9]\+\).*/\1/g' \
             | sort -u \
           )
           # flatten
           stories=$(echo $stories)
-          echo "STORIES=${stories}" >> $GITHUB_ENV
           echo 'STORIES:'
           echo "${stories}"
+          echo "STORIES=${stories}" >> $GITHUB_ENV
       - name: Label Shortcut Stories
         id: label-shortcut-stories
         run: |
           set -x
           story_ids_spaced="${{ env.STORIES }}"
+          if [[ -z "${story_ids_spaced}" ]]; then
+            echo "No stories found"
+            exit 0
+          fi
           image="${{ inputs.imageName }}"
           tag="${{ inputs.imageTag }}"
           json=$( \
