@@ -5,7 +5,10 @@ on:
       imageName:
         required: true
         type: string
-      imageTag: # Full version
+      imageTag: # i.e. full version
+        required: true
+        type: string
+      releaseCommit:
         required: true
         type: string
       sourceBranch:
@@ -33,14 +36,15 @@ jobs:
       - id: find-stories
         name: Find shortcut stories
         run: |
-          release_log=$(git log --pretty=oneline | grep 'Create release - ${{ inputs.imageName}}' | head -n 2)
-          echo 'release_log:'
-          echo "${release_log}"
-          prev_release_commit=$(echo "${release_log} | tail -n 1 | awk '{ print $1 }')
-          curr_release_commit=$(echo "${release_log} | head -n 1 | awk '{ print $1 }')
+          prev_release_commit=$( \
+            git log --pretty=oneline ${{ inputs.releaseCommit }} \
+            | grep 'Create release - ${{ inputs.imageName}}' \
+            | head -n 1 \
+            | awk '{ print $1 }' \
+          )
           
           stories=$( \
-            git log --pretty=oneline $curr_release_commit...$prev_release_commit \
+            git log --pretty=oneline ${{ inputs.releaseCommit }}...$prev_release_commit \
             | grep 'sc-[0-9]' \
             | sed 's/.*sc-\([0-9]\+\).*/\1/g' \
             | sort -u \
