@@ -339,7 +339,6 @@ jobs:
       imageName: ${{ inputs.imageName }}
       imageTag: ${{ needs.publish-to-ecr.outputs.imageTag }}
       releaseCommit: ${{ needs.create-new-release.outputs.releaseCommit }}
-      sourceBranch: ${{ needs.create-new-release.outputs.sourceBranch }}
     secrets: inherit
 
   deploy-to-k8s-qa:

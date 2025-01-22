@@ -11,9 +11,6 @@ on:
       releaseCommit:
         required: true
         type: string
-      sourceBranch:
-        required: true
-        type: string
     secrets:
       shortcut-api-token:
         required: true
@@ -24,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.sourceBranch }}
+          ref: ${{ inputs.releaseCommit }}
           fetch-depth: 0
 
       - name: Initialize mandatory git config
@@ -39,18 +36,15 @@ jobs:
           set -x
           set -v
           
-          log=$(git log --pretty=oneline ${{ inputs.releaseCommit }})
-          echo "full log:"
-          echo "${log}"
-          
           prev_release_commit=$( \
-            echo "${log}" \
+            git log --pretty=oneline ${{ inputs.releaseCommit }} \
             | grep 'Create release - ${{ inputs.imageName}}' \
+            | tail -n 1 \
             | head -n 1 \
             | awk '{ print $1 }' \
           )
           
-          release_log=$(git log --pretty=oneline ${{ inputs.releaseCommit }}...${prev_release_commit})
+          release_log=$(git log --pretty=oneline "${{ inputs.releaseCommit }}...${prev_release_commit}")
           echo "release_log:"
           echo "${release_log}"
           
