@@ -71,7 +71,7 @@ jobs:
           json=$( \
             jq -n --indent 0 \
             --argjson ids "[${story_ids_spaced// /,}]" \
-            --arg name "test ${image}:${tag}" \
+            --arg name "qa ${image}:${tag}" \
             '{ "story_ids": $ids, "labels_add": [{ "name": $name }] }' \
           )
           
