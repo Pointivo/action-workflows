@@ -72,5 +72,4 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
             -d "${json}" \
-            --fail-with-body \
             -L "https://api.app.shortcut.com/api/v3/stories/bulk"
