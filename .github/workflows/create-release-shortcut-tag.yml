@@ -1,0 +1,72 @@
+name: Reusable - Create Release Shortcut Tag
+on:
+  workflow_call:
+    inputs:
+      imageName:
+        required: true
+        type: string
+      imageTag: # Full version
+        required: true
+        type: string
+      sourceBranch:
+        required: true
+        type: string
+    secrets:
+      shortcut-api-token:
+        required: true
+jobs:
+  label-shortcut-stories:
+    name: "Label Shortcut Stories"
+    runs-on: [ self-hosted, ops-pv ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sourceBranch }}
+          fetch-depth: 0
+
+      - name: Initialize mandatory git config
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "GitHub actions"
+          git config user.email noreply@github.com
+
+      - id: find-stories
+        name: Find shortcut stories
+        run: |
+          release_log=$(git log --pretty=oneline | grep 'Create release - ${{ inputs.imageName}}' | head -n 2)
+          echo 'release_log:'
+          echo "${release_log}"
+          prev_release_commit=$(echo "${release_log} | tail -n 1 | awk '{ print $1 }')
+          curr_release_commit=$(echo "${release_log} | head -n 1 | awk '{ print $1 }')
+          
+          stories=$( \
+            git log --pretty=oneline $curr_release_commit...$prev_release_commit \
+            | grep 'sc-[0-9]' \
+            | sed 's/.*sc-\([0-9]\+\).*/\1/g' \
+            | sort -u \
+          )
+          # flatten
+          stories=$(echo $stories)
+          echo "STORIES=${stories}" >> $GITHUB_ENV
+          echo 'STORIES:'
+          echo "${stories}"
+      - name: Label Shortcut Stories
+        id: label-shortcut-stories
+        run: |
+          set -x
+          story_ids_spaced="${{ env.STORIES }}"
+          image="${{ inputs.imageName }}"
+          tag="${{ inputs.imageTag }}"
+          json=$( \
+            jq -n --indent 0 \
+            --argjson ids "[${story_ids_spaced// /,}]" \
+            --arg name "test ${image}:${tag}" \
+            '{ "story_ids": $ids, "labels_add": [{ "name": $name }] }' \
+          )
+          
+          curl -X PUT \
+            -H "Content-Type: application/json" \
+            -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
+            -d "${json}" \
+            --fail-with-body \
+            -L "https://api.app.shortcut.com/api/v3/stories/bulk"
