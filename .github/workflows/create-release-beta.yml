@@ -76,7 +76,8 @@ on:
         type: string
         default: qa
       app-id:
-        required: true
+        required: false
+        default: 969562
         type: string
 
     secrets:
