@@ -34,19 +34,19 @@ jobs:
         name: Find shortcut stories
         run: |
           set -x
-          set -v
           
           prev_release_commit=$( \
             git log --pretty=oneline ${{ inputs.releaseCommit }} \
             | grep 'Create release - ${{ inputs.imageName}}' \
+            | head -n 2 \
             | tail -n 1 \
-            | head -n 1 \
             | awk '{ print $1 }' \
           )
           
-          release_log=$(git log --pretty=oneline "${{ inputs.releaseCommit }}...${prev_release_commit}")
-          echo "release_log:"
-          echo "${release_log}"
+          set -v
+          
+          range="${{ inputs.releaseCommit }}...${prev_release_commit}"
+          release_log=$(git log --pretty=oneline "${range}")
           
           stories=$( \
             echo "${release_log}"
@@ -56,8 +56,6 @@ jobs:
           )
           # flatten
           stories=$(echo $stories)
-          echo 'STORIES:'
-          echo "${stories}"
           echo "STORIES=${stories}" >> $GITHUB_ENV
       - name: Label Shortcut Stories
         id: label-shortcut-stories
