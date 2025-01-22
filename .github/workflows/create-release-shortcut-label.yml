@@ -49,7 +49,7 @@ jobs:
           release_log=$(git log --pretty=oneline "${range}")
           
           stories=$( \
-            echo "${release_log}"
+            echo "${release_log}" \
             | grep 'sc-[0-9]' \
             | sed 's/.*sc-\([0-9]\+\).*/\1/g' \
             | sort -u \
