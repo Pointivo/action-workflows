@@ -1,4 +1,4 @@
-name: Reusable - Build Release
+name: Reusable - Build Release (w/ Shortcut Label)
 
 on:
   workflow_call:
@@ -67,6 +67,8 @@ on:
         required: true
       slack-webhook-url:
         required: false
+      shortcut-api-token:
+        required: true
 
 
 jobs:
@@ -270,16 +272,6 @@ jobs:
                --title "${{ inputs.imageName }} v${{ env.RELEASE_VERSION }}"
                --notes-file CHANGELOG_RELEASE.md
                --target ${{ steps.make-commit.outputs.commit }}
-
-  label-shortcut:
-    name: "Add Release Label to Shortcut Stories"
-    needs: [ create-new-release, publish-to-ecr ]
-    uses: pointivo/action-workflows/.github/workflows/create-release-shortcut-label.yml@main
-    with:
-      imageName: ${{ inputs.imageName }}
-      imageTag: ${{ needs.publish-to-ecr.outputs.imageTag }}
-      releaseCommit: ${{ needs.create-new-release.outputs.releaseCommit }}
-    secrets: inherit
 
   slack-notification:
     name: "Slack Notification"
