@@ -271,16 +271,6 @@ jobs:
                --notes-file CHANGELOG_RELEASE.md
                --target ${{ steps.make-commit.outputs.commit }}
 
-  label-shortcut:
-    name: "Add Release Label to Shortcut Stories"
-    needs: [ create-new-release, publish-to-ecr ]
-    uses: pointivo/action-workflows/.github/workflows/create-release-shortcut-label.yml@main
-    with:
-      imageName: ${{ inputs.imageName }}
-      imageTag: ${{ needs.publish-to-ecr.outputs.imageTag }}
-      releaseCommit: ${{ needs.create-new-release.outputs.releaseCommit }}
-    secrets: inherit
-
   slack-notification:
     name: "Slack Notification"
     needs: [ publish-to-ecr, build-and-test ]
