@@ -99,14 +99,14 @@ jobs:
           dockerfileDirectory: ${{ inputs.dockerfileDirectory }}
           dockerfileName: ${{ inputs.dockerfileName }}
 
-#      - name: Upload Unit Test Results
-#        if: always()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: unit-tests-artifacts
-#          path: build/artifacts/
-#          if-no-files-found: warn
-#          overwrite: 'true'
+      - name: Upload Unit Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-tests-artifacts
+          path: build/artifacts/
+          if-no-files-found: warn
+          overwrite: 'true'
 
   publish-test-results:
     name: "Publish Unit Tests Results"
@@ -118,26 +118,26 @@ jobs:
         id: check
         run: echo "ignoreMissing=${{ inputs.ignore-missing-unit-tests }}" >> $GITHUB_OUTPUT
 
-#      - name: Download Artifacts
-#        id: download
-#        uses: actions/download-artifact@v4
-#        continue-on-error: ${{ steps.check.outputs.ignoreMissing != '' }}
-#        with:
-#          name: unit-tests-artifacts
-#
-#      - name: Display structure of downloaded files
-#        run: ls -R
-#
-#      - name: Publish Unit Test Results
-#        id: test-results
-#        uses: EnricoMi/publish-unit-test-result-action@v2
-#        if: steps.download.outcome == 'success'
-#        with:
-#          action_fail: true
-#          files: |
-#            *.xml
-#            ./**/*.xml
-#            !**_cov.xml
+      - name: Download Artifacts
+        id: download
+        uses: actions/download-artifact@v4
+        continue-on-error: ${{ steps.check.outputs.ignoreMissing != '' }}
+        with:
+          name: unit-tests-artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
+      - name: Publish Unit Test Results
+        id: test-results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: steps.download.outcome == 'success'
+        with:
+          action_fail: true
+          files: |
+            *.xml
+            ./**/*.xml
+            !**_cov.xml
 
   cleanup:
     name: "Cleanup docker resources"
