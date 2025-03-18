@@ -79,6 +79,10 @@ on:
         required: false
         default: 969562
         type: string
+      bump-minor-version:
+        required: false
+        default: true
+        type: boolean
 
     secrets:
       aws-account-id:
@@ -176,14 +180,15 @@ jobs:
           
           echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
-          # Bump minor version
-          git pull origin ${{ env.PV_SOURCE_BRANCH }}
-          bash version.sh -b minor
-          git add $(bash version.sh -p)
-          git status
-          git pull origin ${{ env.PV_SOURCE_BRANCH }}
-          git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})"
-          git push origin ${{ env.PV_SOURCE_BRANCH }}
+          if ${{ inputs.bump-minor-version }}; then
+            git pull origin ${{ env.PV_SOURCE_BRANCH }}
+            bash version.sh -b minor
+            git add $(bash version.sh -p)
+            git status
+            git pull origin ${{ env.PV_SOURCE_BRANCH }}
+            git commit --message "Bump Minor version after Release (v${RELEASE_VERSION})"
+            git push origin ${{ env.PV_SOURCE_BRANCH }}
+          fi
 
       - name: Extract Changelog
         run: |
