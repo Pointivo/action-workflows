@@ -19,12 +19,12 @@ jobs:
     env:
       MESSAGE: ${{ github.event.head_commit.message }}
     outputs:
-      STORY_ID: ${{ steps.parse.outputs.STORY_ID }}
+      STORY_ID: ${{ steps.parse.outputs.STORY_ID }l}
       COMMENT: ${{ steps.build-comment.outputs.COMMENT }}
     steps:
       - id: parse
         run: |
-          story_id=$(echo "${{ env.MESSAGE }}" | head -n 1 | sed 's/.*sc-\([0-9]\+\).*/\1/g')
+          story_id=$(echo "${{ env.MESSAGE }}" | head -n 1 | grep 'sc-[0-9]\+' | sed 's/.*sc-\([0-9]\+\).*/\1/g')
           if [[ -n "${story_id}" ]]; then
             echo "STORY_ID=${story_id}" >> $GITHUB_OUTPUT
           else
