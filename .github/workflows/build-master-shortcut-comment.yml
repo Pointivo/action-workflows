@@ -19,7 +19,7 @@ jobs:
     env:
       MESSAGE: ${{ github.event.head_commit.message }}
     outputs:
-      STORY_ID: ${{ steps.parse.outputs.STORY_ID }l}
+      STORY_ID: ${{ steps.parse.outputs.STORY_ID }}
       COMMENT: ${{ steps.build-comment.outputs.COMMENT }}
     steps:
       - id: parse
