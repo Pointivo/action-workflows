@@ -180,7 +180,7 @@ jobs:
           
           echo "releaseCommit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           
-          if ${{ inputs.bump-minor-version }}; then
+          if [ ${{ inputs.bump-minor-version }} = true ]; then
             git pull origin ${{ env.PV_SOURCE_BRANCH }}
             bash version.sh -b minor
             git add $(bash version.sh -p)
