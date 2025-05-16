@@ -286,6 +286,17 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
+      - name: Get workflow status
+        id: status
+        run: |
+          if [[ "${{ needs.publish-to-ecr.result }}" == "success" && "${{ needs.build-and-test.result }}" == "success" && "${{ needs.publish-test-results.result }}" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+          fi
+
       - name: Slack workflow notification
         uses: slackapi/slack-github-action@v1.25.0
         env:
@@ -294,14 +305,22 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ inputs.imageName }} for <${{github.ref_name}}> build status: ${{ needs.publish-to-ecr.result && needs.build-and-test.result }}",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ inputs.imageName }} build status for branch <${{github.ref_name}}> was: ${{ needs.publish-to-ecr.result && needs.build-and-test.result && needs.publish-test-results.result }} (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Open>)"
+                    "text": "${{ steps.status.outputs.emoji }} *${{ inputs.imageName }}* build for branch `${{ github.ref_name }}` was *${{ steps.status.outputs.status }}*"
                   }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | View Workflow>"
+                    }
+                  ]
                 }
               ]
             }
