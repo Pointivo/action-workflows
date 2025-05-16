@@ -311,16 +311,16 @@ jobs:
                   "text": {
                     "type": "mrkdwn",
                     "text": "${{ steps.status.outputs.emoji }} *${{ inputs.imageName }}* build for branch `${{ github.ref_name }}` was *${{ steps.status.outputs.status }}*"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Workflow",
+                      "emoji": true
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                   }
-                },
-                {
-                  "type": "context",
-                  "elements": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | View Workflow>"
-                    }
-                  ]
                 }
               ]
             }
