@@ -67,6 +67,9 @@ jobs:
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
+      - uses: ConorMacBride/install-package@v1
+        with:
+          apt: git-lfs
       - uses: actions/checkout@v4
         with:
           lfs: true
