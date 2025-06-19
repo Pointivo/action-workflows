@@ -48,7 +48,7 @@ on:
       runner:
         required: false
         type: string
-        default: ops-pv-test-1
+        default: pv-arc-runner-set
 
     secrets:
       aws-access-key-id:
