@@ -73,7 +73,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             git-lfs \
-            semver
+            node-semver
 
       - uses: actions/checkout@v4
         with:
