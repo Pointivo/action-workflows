@@ -67,6 +67,9 @@ jobs:
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
+      - name: Install Git LFS
+        if: contains(inputs.runner, 'arc')
+        run: sudo apt install git-lfs -y
       - uses: actions/checkout@v4
         with:
           lfs: true
