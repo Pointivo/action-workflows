@@ -101,10 +101,11 @@ jobs:
     steps:
       - name: Install Git LFS
         if: contains(inputs.runner, 'arc')
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: git-lfs node-semver
-          version: 1.0
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git-lfs \
+            node-semver
 
       - uses: actions/checkout@v4
         with:
