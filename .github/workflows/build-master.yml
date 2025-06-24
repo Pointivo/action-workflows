@@ -109,7 +109,6 @@ jobs:
         with:
           packages: git-lfs node-semver
           version: 1.0
-          execute_install_scripts: true
 
       - uses: actions/checkout@v4
         with:
