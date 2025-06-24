@@ -182,7 +182,7 @@ jobs:
   publish-to-ecr:
     name: "Publish Image to ECR"
     needs: build-and-test
-    runs-on: [ self-hosted, ops-pv ]
+    runs-on: ${{ inputs.runner }}
     if: success()
     outputs:
       repository: ${{ steps.push.outputs.repository }}
