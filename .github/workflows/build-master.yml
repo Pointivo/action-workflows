@@ -99,10 +99,6 @@ jobs:
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
-      - name: Install Git LFS (update apt)
-        if: contains(inputs.runner, 'arc')
-        run: |
-          sudo apt-get update
       - name: Install Git LFS
         if: contains(inputs.runner, 'arc')
         uses: awalsh128/cache-apt-pkgs-action@latest
