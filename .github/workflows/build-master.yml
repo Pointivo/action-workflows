@@ -230,7 +230,7 @@ jobs:
   cleanup:
     name: "Cleanup docker resources"
     needs: [ publish-to-ecr, build-and-test ]
-    runs-on: ${{ inputs.runner }}
+    runs-on: [ self-hosted, ops-pv ]
     if: success() || failure()
     steps:
       - name: Cleanup

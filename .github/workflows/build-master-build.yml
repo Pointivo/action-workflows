@@ -75,13 +75,6 @@ jobs:
     outputs:
       imageTag: ${{ steps.build.outputs.imageTag }}
     steps:
-      - name: Install Git LFS
-        if: contains(inputs.runner, 'arc')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            git-lfs \
-            node-semver
       - uses: actions/checkout@v4
         if: inputs.checkout
         with:
