@@ -129,11 +129,13 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - uses: actions/create-github-app-token@v2
-        name: GitHub App Token
+        name: GitHub App Core Package Token
         id: app-token
         with:
           app-id: ${{ inputs.app-id }}
           private-key: ${{ secrets.app-private-key }}
+          owner: ${{ github.repository_owner }}
+          permission-packages: read
 
       - name: Build Docker image
         id: build
