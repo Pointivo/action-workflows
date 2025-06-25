@@ -135,7 +135,6 @@ jobs:
           app-id: ${{ inputs.app-id }}
           private-key: ${{ secrets.app-private-key }}
           owner: ${{ github.repository_owner }}
-          permission-packages: read
 
       - name: Build Docker image
         id: build
