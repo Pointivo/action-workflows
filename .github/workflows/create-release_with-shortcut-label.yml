@@ -254,6 +254,7 @@ jobs:
           releaseStage: ${{ inputs.releaseStage }}
           dockerfileDirectory: ${{ inputs.dockerfileDirectory }}
           dockerfileName: ${{ inputs.dockerfileName }}
+          githubToken: ${{ secrets.github-token }}
 
       - name: Upload Unit Test Results
         if: always()
