@@ -302,13 +302,43 @@ jobs:
       - name: Get workflow status
         id: status
         run: |
-          if [[ "${{ needs.publish-to-ecr.result }}" == "success" && "${{ needs.build-and-test.result }}" == "success" && "${{ needs.publish-test-results.result }}" == "success" ]]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "emoji=✅" >> $GITHUB_OUTPUT
+          status_publish="${{ needs.publish-to-ecr.result }}"
+          status_build="${{ needs.build-and-test.result }}"
+          status_test="${{ needs.publish-test-results.result }}"
+
+          # Determine overall status (customize as needed)
+          if [[ "$status_publish" == "success" && "$status_build" == "success" && "$status_test" == "success" ]]; then
+            overall_status="success"
+          elif [[ "$status_publish" == "cancelled" || "$status_build" == "cancelled" || "$status_test" == "cancelled" ]]; then
+            overall_status="cancelled"
+          elif [[ "$status_publish" == "skipped" || "$status_build" == "skipped" || "$status_test" == "skipped" ]]; then
+            overall_status="skipped"
+          elif [[ "$status_publish" == "timed_out" || "$status_build" == "timed_out" || "$status_test" == "timed_out" ]]; then
+            overall_status="timed_out"
+          elif [[ "$status_publish" == "action_required" || "$status_build" == "action_required" || "$status_test" == "action_required" ]]; then
+            overall_status="action_required"
+          elif [[ "$status_publish" == "neutral" || "$status_build" == "neutral" || "$status_test" == "neutral" ]]; then
+            overall_status="neutral"
+          elif [[ "$status_publish" == "failure" || "$status_build" == "failure" || "$status_test" == "failure" ]]; then
+            overall_status="failure"
           else
-            echo "status=failure" >> $GITHUB_OUTPUT
-            echo "emoji=❌" >> $GITHUB_OUTPUT
+            overall_status="unknown"
           fi
+
+          # Map overall status to emoji
+          case "$overall_status" in
+            "success") emoji="✅";;
+            "failure") emoji="❌";;
+            "cancelled") emoji="🚫";;
+            "skipped") emoji="⏭️";;
+            "neutral") emoji="⚪";;
+            "timed_out") emoji="⏰";;
+            "action_required") emoji="⚠️";;
+            *) emoji="❓";;
+          esac
+
+          echo "status=$overall_status" >> $GITHUB_OUTPUT
+          echo "emoji=$emoji" >> $GITHUB_OUTPUT
 
       - name: Slack workflow notification
         uses: slackapi/slack-github-action@v1.25.0
@@ -323,7 +353,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ steps.status.outputs.emoji }} *${{ inputs.imageName }}* build for branch `${{ github.ref_name }}` was *${{ steps.status.outputs.status }}*"
+                    "text": "${{ steps.status.outputs.emoji }} *${{ inputs.imageName }}* build status for branch `${{ github.ref_name }}` was *${{ steps.status.outputs.status }}*"
                   },
                   "accessory": {
                     "type": "button",
