@@ -295,6 +295,7 @@ jobs:
   collect-status:
     name: "Collect Overall Status"
     needs: [ build-and-test, publish-to-ecr, publish-test-results ]
+    if: always()
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.status.outputs.status }}
