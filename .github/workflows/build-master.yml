@@ -292,23 +292,24 @@ jobs:
       imageName: ${{ inputs.imageName }}
     secrets: inherit
 
-  slack-notification:
-    name: "Slack Notification"
-    needs: [ publish-to-ecr, build-and-test, publish-test-results ]
-    if: always()
+  collect-status:
+    name: "Collect Overall Status"
+    needs: [ build-and-test, publish-to-ecr, publish-test-results ]
     runs-on: ubuntu-latest
-    continue-on-error: true
+    outputs:
+      status: ${{ steps.status.outputs.status }}
     steps:
-      - name: Get workflow status
+      - name: Compute overall status
         id: status
         run: |
           status_publish="${{ needs.publish-to-ecr.result }}"
           status_build="${{ needs.build-and-test.result }}"
           status_test="${{ needs.publish-test-results.result }}"
 
-          # Determine overall status (customize as needed)
           if [[ "$status_publish" == "success" && "$status_build" == "success" && "$status_test" == "success" ]]; then
             overall_status="success"
+          elif [[ "$status_publish" == "failure" || "$status_build" == "failure" || "$status_test" == "failure" ]]; then
+            overall_status="failure"
           elif [[ "$status_publish" == "cancelled" || "$status_build" == "cancelled" || "$status_test" == "cancelled" ]]; then
             overall_status="cancelled"
           elif [[ "$status_publish" == "skipped" || "$status_build" == "skipped" || "$status_test" == "skipped" ]]; then
@@ -319,51 +320,22 @@ jobs:
             overall_status="action_required"
           elif [[ "$status_publish" == "neutral" || "$status_build" == "neutral" || "$status_test" == "neutral" ]]; then
             overall_status="neutral"
-          elif [[ "$status_publish" == "failure" || "$status_build" == "failure" || "$status_test" == "failure" ]]; then
-            overall_status="failure"
           else
             overall_status="unknown"
           fi
-
-          # Map overall status to emoji
-          case "$overall_status" in
-            "success") emoji="✅";;
-            "failure") emoji="❌";;
-            "cancelled") emoji="🚫";;
-            "skipped") emoji="⏭️";;
-            "neutral") emoji="⚪";;
-            "timed_out") emoji="⏰";;
-            "action_required") emoji="⚠️";;
-            *) emoji="❓";;
-          esac
-
           echo "status=$overall_status" >> $GITHUB_OUTPUT
-          echo "emoji=$emoji" >> $GITHUB_OUTPUT
 
-      - name: Slack workflow notification
-        uses: slackapi/slack-github-action@v1.25.0
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        with:
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "${{ steps.status.outputs.emoji }} *${{ inputs.imageName }}* build status for branch `${{ github.ref_name }}` was *${{ steps.status.outputs.status }}*"
-                  },
-                  "accessory": {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Workflow",
-                      "emoji": true
-                    },
-                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  }
-                }
-              ]
-            }
+  slack-notification:
+    name: "Slack Notification"
+    needs: [ collect-status ]
+    if: always()
+    uses: ./.github/workflows/slack-notification.yml
+    with:
+      imageName: ${{ inputs.imageName }}
+      status: ${{ needs.collect-status.outputs.status }}
+      branch: ${{ github.ref_name }}
+      run_id: ${{ github.run_id }}
+      repository: ${{ github.repository }}
+      server_url: ${{ github.server_url }}
+    secrets:
+      slack-webhook-url: ${{ secrets.slack-webhook-url }}

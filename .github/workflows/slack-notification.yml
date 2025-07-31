@@ -1,0 +1,117 @@
+name: Slack Notification
+
+on:
+  workflow_call:
+    inputs:
+      imageName:
+        required: true
+        type: string
+      status:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+      run_id:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      server_url:
+        required: true
+        type: string
+    secrets:
+      slack-webhook-url:
+        required: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Map status to emoji
+        id: emoji
+        run: |
+          get_random_emoji() {
+            emojis=("$@")
+            count=${#emojis[@]}
+            index=$((RANDOM % count))
+            echo "${emojis[$index]}"
+          }
+
+          case "${{ inputs.status }}" in
+            "success")
+              emoji=$(get_random_emoji \
+                "✅" "🟢" "🟩" "☘️" "🍀" "💚" "🌲" "🌳" "🥦" "🥝" "🧩" "📗" "🧃" "🦖" "🦚" "🦎" "🍏" "🥒" "🥬" "🌿" "🌱" "🌴" "🌵" "🪴")
+              ;;
+            "failure")
+              emoji=$(get_random_emoji \
+                "❌" "🔴" "🟥" "🚨" "🛑" "🔥" "🍎" "🍓" "🍒" "🌶️" "🌋" "🧨" "📕" "📛" "🧯" "🦀" "🦞" "🦐")
+              ;;
+            "cancelled")
+              emoji=$(get_random_emoji \
+                "🚫" "🟡" "🟨" "⚠️" "🍋" "🌕" "🌻" "🌼" "🌙" "🧀" "📒" "📙")
+              ;;
+            "skipped"|"neutral")
+              emoji=$(get_random_emoji \
+                "⚪" "⚫" "🤍" "⬜" "⬛" "🕳️" "💭" "🗯️" "🌫️" "🌁" "🌪️" "🌬️" "🧊" "🪨" "🦦" "🦨" "🦥")
+              ;;
+            "timed_out")
+              emoji=$(get_random_emoji \
+                "⏰" "🕒" "🕑" "🕓" "⌛" "⏳" "🕰️" "🕛" "🕧" "🕐" "🕜" "🕝" "🕞" "🕟" "🕠" "🕡" "🕢" "🕣" "🕤" "🕥" "🕦" "🕚")
+              ;;
+            "action_required")
+              emoji=$(get_random_emoji \
+                "⚠️" "🟠" "🟧" "❗" "🔔" "🚧" "🚨" "🛎️" "📣" "📢" "🔊")
+              ;;
+            *)
+              emoji=$(get_random_emoji \
+                "❓" "⬜" "⬛" "⚪" "⚫" "❔" "❕" "❗")
+              ;;
+          esac
+          echo "emoji=$emoji" >> $GITHUB_OUTPUT
+
+      - name: Map status to color
+        id: color
+        run: |
+          case "${{ inputs.status }}" in
+            "success") color="#2eb886";;   # green
+            "failure") color="#e01e5a";;   # red
+            "cancelled") color="#e3b900";; # yellow
+            *) color="#cccccc";;           # gray
+          esac
+          echo "color=$color" >> $GITHUB_OUTPUT
+
+      - name: Slack workflow notification
+        uses: slackapi/slack-github-action@v1.25.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        with:
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ steps.color.outputs.color }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "${{ steps.emoji.outputs.emoji }} *${{ inputs.imageName }}* build status for branch `${{ inputs.branch }}` was *${{ inputs.status }}*"
+                      },
+                      "accessory": {
+                        "type": "button",
+                        "text": {
+                          "type": "plain_text",
+                          "text": "View Workflow",
+                          "emoji": true
+                        },
+                        "url": "${{ inputs.server_url }}/${{ inputs.repository }}/actions/runs/${{ inputs.run_id }}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            } 
