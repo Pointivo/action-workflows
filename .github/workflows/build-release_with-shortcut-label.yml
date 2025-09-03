@@ -3,6 +3,10 @@ name: Reusable - Build Release (w/ Shortcut Label)
 on:
   workflow_call:
     inputs:
+      app-id:
+        required: false
+        default: 969562
+        type: string
       imageName:
         required: true
         type: string
@@ -55,6 +59,8 @@ on:
         default: us-east-1
 
     secrets:
+      app-private-key:
+        required: true
       aws-account-id:
         required: false
       aws-access-key-id:
@@ -79,9 +85,14 @@ jobs:
       imageTag: ${{ steps.build.outputs.imageTag }}
       appVersion: ${{ steps.version.outputs.appVersion }}
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ inputs.app-id }}
+          private-key: ${{ secrets.app-private-key }}
       - uses: actions/checkout@v4
         with:
-          lfs: true
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Bump (Patch) version
         id: version
