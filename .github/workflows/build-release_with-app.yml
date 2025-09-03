@@ -1,4 +1,4 @@
-name: Reusable - Build Release (w/ Shortcut Label) DEPRECATED
+name: Reusable - Build Release (w/ GitHub App)
 
 on:
   workflow_call:
@@ -73,8 +73,6 @@ on:
         required: true
       slack-webhook-url:
         required: false
-      shortcut-api-token:
-        required: true
 
 
 jobs:
