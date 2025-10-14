@@ -68,15 +68,17 @@ jobs:
           fi
           image="${{ inputs.imageName }}"
           tag="${{ inputs.imageTag }}"
-          json=$( \
-            jq -n --indent 0 \
-            --argjson ids "[${story_ids_spaced// /,}]" \
-            --arg name "qa ${image}:${tag}" \
-            '{ "story_ids": $ids, "labels_add": [{ "name": $name }] }' \
-          )
-          
-          curl -X PUT \
-            -H "Content-Type: application/json" \
-            -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
-            -d "${json}" \
-            -L "https://api.app.shortcut.com/api/v3/stories/bulk"
+          for story_id in $story_ids_spaced; do
+            json=$( \
+              jq -n --indent 0 \
+              --argjson ids "[${story_id}]" \
+              --arg name "qa ${image}:${tag}" \
+              '{ "story_ids": $ids, "labels_add": [{ "name": $name }] }' \
+            )
+            
+            curl -X PUT \
+              -H "Content-Type: application/json" \
+              -H "Shortcut-Token: ${{ secrets.shortcut-api-token }}" \
+              -d "${json}" \
+              -L "https://api.app.shortcut.com/api/v3/stories/bulk"
+          done
