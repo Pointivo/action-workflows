@@ -15,7 +15,7 @@ jobs:
   build-inputs:
     name: "Build inputs to Shortcut Commenter"
     runs-on: [ self-hosted, ops-pv ]
-    if: contains(github.event.head_commit.message, 'sc-')
+    if: contains(github.event.head_commit.message, 'sc-') && !contains(github.event.head_commit.message, '"')
     env:
       MESSAGE: ${{ github.event.head_commit.message }}
     outputs:
