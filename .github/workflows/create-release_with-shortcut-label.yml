@@ -351,7 +351,7 @@ jobs:
   deploy-to-k8s-qa:
     name: "Deploy to K8s-QA"
     needs: [ publish-to-ecr, create-new-release ]
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, ops-pv ]
     if: success() && (!inputs.skipPromotion || inputs.skipPromotion == 'false')
     steps:
       - name: Get Variables
@@ -406,7 +406,7 @@ jobs:
     name: "Slack Notification"
     needs: [ publish-to-ecr, build-and-test ]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, ops-pv ]
     continue-on-error: true
     steps:
       - name: Slack workflow notification

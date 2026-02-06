@@ -152,7 +152,7 @@ jobs:
   publish-test-results:
     name: "Publish Unit Tests Results"
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     if: success() || failure()
     steps:
       - name: Check ENV
@@ -231,7 +231,7 @@ jobs:
   cleanup:
     name: "Cleanup docker resources"
     needs: [ publish-to-ecr, build-and-test ]
-    runs-on: [ self-hosted, ops-pv ]
+    runs-on: ${{ inputs.runner }}
     if: success() || failure()
     steps:
       - name: Cleanup
@@ -243,7 +243,7 @@ jobs:
   deploy-to-k8s-master:
     name: "Deploy to K8s-Master"
     needs: publish-to-ecr
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     if: success() && (!inputs.skipPromotion || inputs.skipPromotion == 'false')
     steps:
       - name: Get Variables
@@ -296,7 +296,7 @@ jobs:
     name: "Collect Overall Status"
     needs: [ build-and-test, publish-to-ecr, publish-test-results ]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     outputs:
       status: ${{ steps.status.outputs.status }}
     steps:
