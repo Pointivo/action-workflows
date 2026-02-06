@@ -152,7 +152,7 @@ jobs:
   publish-test-results:
     name: "Publish Unit Tests Results"
     needs: build-and-test
-    runs-on: ${{ inputs.runner }}
+    runs-on: ubuntu-latest
     if: success() || failure()
     steps:
       - name: Check ENV
