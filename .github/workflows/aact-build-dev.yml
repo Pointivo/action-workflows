@@ -101,6 +101,14 @@ jobs:
         with:
           lfs: true
 
+      - name: Trust workspace for git
+        run: |
+          # Some containerized actions run with different HOME/path mappings.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory /github/workspace
+          git config --system --add safe.directory "$GITHUB_WORKSPACE"
+          git config --system --add safe.directory /github/workspace
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
