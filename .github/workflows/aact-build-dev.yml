@@ -78,11 +78,10 @@ on:
         required: false
 
 jobs:
-  build-and-test:
-    name: "Build and Test"
+  build-dev:
+    name: "Build Dev"
     runs-on: ${{ inputs.runner }}
-    outputs:
-      imageTag: ${{ steps.build.outputs.imageTag }}
+    container: ubuntu:latest
     steps:
       - name: Install Git LFS
         if: contains(inputs.runner, 'arc')
@@ -125,68 +124,23 @@ jobs:
           dockerfileName: ${{ inputs.dockerfileName }}
           githubToken: ${{ secrets.github-token }}
 
-      - name: Upload Unit Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-tests-artifacts
-          path: build/artifacts/
-          if-no-files-found: warn
-          overwrite: 'true'
-
-  publish-test-results:
-    name: "Publish Unit Tests Results"
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: success() || failure()
-    steps:
-      - name: Check ENV
-        id: check
-        run: echo "ignoreMissing=${{ inputs.ignore-missing-unit-tests }}" >> $GITHUB_OUTPUT
-
-      - name: Download Artifacts
-        id: download
-        uses: actions/download-artifact@v4
-        continue-on-error: ${{ steps.check.outputs.ignoreMissing != '' }}
-        with:
-          name: unit-tests-artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -R
-
       - name: Publish Unit Test Results
         id: test-results
+        if: steps.build.outcome == 'success'
         uses: EnricoMi/publish-unit-test-result-action@v2
-        if: steps.download.outcome == 'success'
         with:
           action_fail: true
           files: |
-            *.xml
-            ./**/*.xml
-            !**_cov.xml
-
-  publish-to-ecr:
-    name: "Publish Image to ECR"
-    needs: build-and-test
-    runs-on: ${{ inputs.runner }}
-    if: success()
-    outputs:
-      repository: ${{ steps.push.outputs.repository }}
-      imageTag: ${{ steps.push.outputs.imageTag }}
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: ${{ inputs.ecr-region }}
+            build/artifacts/**/*.xml
+            !build/artifacts/**/*_cov.xml
 
       - name: Tag and push image to Amazon ECR
         id: push
+        if: steps.test-results.outcome == 'success'
         env:
           REGISTRY: ${{ secrets.ecr-registry }}
           REPOSITORY: ${{ inputs.imageName }}
-          IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
+          IMAGE_TAG: ${{ steps.build.outputs.imageTag }}
         run: |
           echo REGISTRY=$REGISTRY
           echo IMAGE_TAG=$IMAGE_TAG
@@ -194,8 +148,6 @@ jobs:
           echo IMAGE_TAG=$IMAGE_TAG
           BRANCH=${GITHUB_REF#refs/heads/}
           echo BRANCH=$BRANCH
-          echo "repository=$REPOSITORY" >> $GITHUB_OUTPUT
-          echo "imageTag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
           # Move tag
           docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
@@ -213,73 +165,6 @@ jobs:
           
           docker push $REGISTRY/$REPOSITORY:$BRANCH
 
-  cleanup:
-    name: "Cleanup docker resources"
-    needs: [ publish-to-ecr, build-and-test ]
-    runs-on: ${{ inputs.runner }}
-    if: success() || failure()
-    steps:
-      - name: Cleanup
-        uses: pointivo/action-cleanup@master
-        env:
-          IMAGE_NAME: ${{ inputs.imageName }}
-          IMAGE_TAG: ${{ needs.build-and-test.outputs.imageTag }}
-
-  commit-comment:
-    name: "Add Comment to Shortcut Story"
-    needs: [ build-and-test, publish-to-ecr ]
-    if: github.event_name == 'push' && inputs.enable-shortcut
-    uses: pointivo/action-workflows/.github/workflows/build-master-shortcut-comment.yml@main
-    with:
-      imageTag: ${{ needs.build-and-test.outputs.imageTag }}
-      imageName: ${{ inputs.imageName }}
-    secrets: inherit
-
-  collect-status:
-    name: "Collect Overall Status"
-    needs: [ build-and-test, publish-to-ecr, publish-test-results ]
-    if: always()
-    runs-on: ${{ inputs.runner }}
-    outputs:
-      status: ${{ steps.status.outputs.status }}
-    steps:
-      - name: Compute overall status
-        id: status
-        run: |
-          status_publish="${{ needs.publish-to-ecr.result }}"
-          status_build="${{ needs.build-and-test.result }}"
-          status_test="${{ needs.publish-test-results.result }}"
-
-          if [[ "$status_publish" == "success" && "$status_build" == "success" && "$status_test" == "success" ]]; then
-            overall_status="success"
-          elif [[ "$status_publish" == "failure" || "$status_build" == "failure" || "$status_test" == "failure" ]]; then
-            overall_status="failure"
-          elif [[ "$status_publish" == "cancelled" || "$status_build" == "cancelled" || "$status_test" == "cancelled" ]]; then
-            overall_status="cancelled"
-          elif [[ "$status_publish" == "skipped" || "$status_build" == "skipped" || "$status_test" == "skipped" ]]; then
-            overall_status="skipped"
-          elif [[ "$status_publish" == "timed_out" || "$status_build" == "timed_out" || "$status_test" == "timed_out" ]]; then
-            overall_status="timed_out"
-          elif [[ "$status_publish" == "action_required" || "$status_build" == "action_required" || "$status_test" == "action_required" ]]; then
-            overall_status="action_required"
-          elif [[ "$status_publish" == "neutral" || "$status_build" == "neutral" || "$status_test" == "neutral" ]]; then
-            overall_status="neutral"
-          else
-            overall_status="unknown"
-          fi
-          echo "status=$overall_status" >> $GITHUB_OUTPUT
-
-  slack-notification:
-    name: "Slack Notification"
-    needs: [ collect-status ]
-    if: always()
-    uses: ./.github/workflows/slack-notification.yml
-    with:
-      imageName: ${{ inputs.imageName }}
-      status: ${{ needs.collect-status.outputs.status }}
-      branch: ${{ github.ref_name }}
-      run_id: ${{ github.run_id }}
-      repository: ${{ github.repository }}
-      server_url: ${{ github.server_url }}
-    secrets:
-      slack-webhook-url: ${{ secrets.slack-webhook-url }}
+# TODO Shortcut integration, Teams notifications
+# NOTE We want to do everything in a single job if possible because
+#        each job is a separate container and it just adds complexity
