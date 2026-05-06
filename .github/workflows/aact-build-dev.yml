@@ -86,8 +86,8 @@ jobs:
       - name: Install Git LFS
         if: contains(inputs.runner, 'arc')
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          apt-get update
+          apt-get install -y \
             git-lfs \
             node-semver
 
@@ -146,24 +146,9 @@ jobs:
           echo IMAGE_TAG=$IMAGE_TAG
           echo REPOSITORY=$REPOSITORY
           echo IMAGE_TAG=$IMAGE_TAG
-          BRANCH=${GITHUB_REF#refs/heads/}
-          echo BRANCH=$BRANCH
-
-          # Move tag
+          
           docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$BRANCH
-          
-          # Publish to ECR
-          
-          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
-            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
-          
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          
-          aws ecr get-login-password --region ${{ inputs.ecr-region }} | 
-            docker login --username AWS --password-stdin ${{ secrets.ecr-registry }}
-          
-          docker push $REGISTRY/$REPOSITORY:$BRANCH
 
 # TODO Shortcut integration, Teams notifications
 # NOTE We want to do everything in a single job if possible because
