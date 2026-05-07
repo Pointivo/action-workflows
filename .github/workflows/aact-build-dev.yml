@@ -83,7 +83,7 @@ jobs:
     name: "Build Dev"
     runs-on: ${{ inputs.runner }}
     container:
-      image: ubuntu:latest
+      image: cruizba/ubuntu-dind
     steps:
       - name: Install Git LFS
         if: contains(inputs.runner, 'arc')
