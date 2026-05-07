@@ -18,6 +18,12 @@ on:
       changeLogFile: # deprecated
         required: false
         type: string
+      pullImages: # deprecated - no longer used; caching removed for ephemeral builders
+        required: false
+        type: string
+      cachedStages: # deprecated - no longer used; caching removed for ephemeral builders
+        required: false
+        type: string
       buildStage:
         required: false
         type: string
