@@ -18,15 +18,10 @@ on:
       changeLogFile: # deprecated
         required: false
         type: string
-      pullImages:
-        required: false
-        type: string
-      cachedStages:
-        required: false
-        type: string
       buildStage:
         required: false
         type: string
+        default: build
       releaseStage:
         required: false
         type: string
@@ -40,9 +35,11 @@ on:
       dockerfileDirectory:
         required: false
         type: string
+        default: ./
       dockerfileName:
         required: false
         type: string
+        default: Dockerfile
       ignore-missing-unit-tests:
         required: false
         type: boolean
@@ -52,19 +49,10 @@ on:
         required: false
         type: string
         default: us-east-1
-      enable-shortcut: # temporary
-        required: false
-        type: boolean
-        default: false
       runner:
         required: false
         type: string
         default: ops-aact-arc-general-purpose
-      docker-daemon-endpoint:
-        required: false
-        type: string
-        default: unix:///var/run/docker.sock
-        description: Deprecated; this workflow starts and uses the local dockerd socket.
       buildkit-endpoint:
         required: false
         type: string
@@ -83,50 +71,14 @@ on:
         required: true
       slack-webhook-url:
         required: false
-      shortcut-api-token:
-        required: false
 
 jobs:
   build-dev:
     name: "Build Dev"
     runs-on: ${{ inputs.runner }}
     container:
-      image: cruizba/ubuntu-dind
-      options: --privileged
-    env:
-      DOCKER_HOST: unix:///var/run/docker.sock
-      DOCKER_TLS_CERTDIR: ""
+      image: ubuntu:latest
     steps:
-      - name: Start local Docker daemon
-        run: |
-          # Run dockerd without iptables/bridge/masq – safe in unprivileged Kubernetes pods
-          # where the node uses containerd and iptables manipulation is not permitted.
-          dockerd \
-            --host=unix:///var/run/docker.sock \
-            --tls=false \
-            --iptables=false \
-            --ip-masq=false \
-            --ip-forward=false \
-            --bridge=none \
-            --storage-driver=overlay2 \
-            >/tmp/dockerd.log 2>&1 &
-
-          for i in $(seq 1 60); do
-            if docker info >/dev/null 2>&1; then
-              echo "Docker daemon is ready"
-              break
-            fi
-            sleep 1
-          done
-
-          docker info >/dev/null 2>&1 || (echo "dockerd failed to start" && tail -n 200 /tmp/dockerd.log && exit 1)
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-        with:
-          driver: remote
-          endpoint: ${{ inputs.buildkit-endpoint }}
-
       - name: Install Git LFS
         if: contains(inputs.runner, 'arc')
         run: |
@@ -141,16 +93,32 @@ jobs:
 
       - name: Trust workspace for git
         run: |
-          # Some containerized actions run with different HOME/path mappings.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --global --add safe.directory /github/workspace
-          git config --system --add safe.directory "$GITHUB_WORKSPACE"
-          git config --system --add safe.directory /github/workspace
 
-      - name: Verify Docker daemon endpoint
+      - name: Compute image tag
+        id: tag
         run: |
-          echo "DOCKER_HOST=$DOCKER_HOST"
-          docker version
+          SEMVER=$(cat "${{ inputs.semverFile }}")
+          GIT_SHA_SHORT=$(git rev-parse --short HEAD)
+          RELEASE_TAG="${{ inputs.releaseTag }}"
+          IMAGE_TAG="${SEMVER}_${RELEASE_TAG}_GH${{ github.run_number }}.${GIT_SHA_SHORT}"
+          FULL_SEMVER="${SEMVER}-${RELEASE_TAG}+GH${{ github.run_number }}.${GIT_SHA_SHORT}"
+
+          echo "imageTag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "fullSemver=${FULL_SEMVER}" >> $GITHUB_OUTPUT
+          echo "gitShaShort=${GIT_SHA_SHORT}" >> $GITHUB_OUTPUT
+          echo "semver=${SEMVER}" >> $GITHUB_OUTPUT
+
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "GIT_SHA_SHORT=${GIT_SHA_SHORT}" >> $GITHUB_ENV
+          echo "SEMVER=${SEMVER}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: remote
+          endpoint: ${{ inputs.buildkit-endpoint }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -159,31 +127,52 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
           aws-region: ${{ inputs.ecr-region }}
 
-      - name: Login to Amazon ECR for Pre-Pull Images
+      - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build Docker image
-        id: build
-        uses: pointivo/action-build@v2
+      - name: Build test/build stage
+        id: build-stage
+        uses: docker/build-push-action@v6
         with:
-          imageName: ${{ inputs.imageName }}
-          semverFile: ${{ inputs.semverFile }}
-          cachedStages: ${{ inputs.cachedStages }}
-          pullImages: ${{ inputs.pullImages }}
-          extraBuildArgs: ${{ inputs.extraBuildArgs }}
-          testPath: ${{ inputs.testPath }}
-          buildStatusPath: ${{ inputs.buildStatusPath }}
-          releaseTag: ${{ inputs.releaseTag }}
-          buildStage: ${{ inputs.buildStage }}
-          releaseStage: ${{ inputs.releaseStage }}
-          dockerfileDirectory: ${{ inputs.dockerfileDirectory }}
-          dockerfileName: ${{ inputs.dockerfileName }}
-          githubToken: ${{ secrets.github-token }}
+          context: .
+          file: ${{ inputs.dockerfileDirectory }}/${{ inputs.dockerfileName }}
+          target: ${{ inputs.buildStage }}
+          load: true
+          tags: build-stage:${{ steps.tag.outputs.imageTag }}
+          build-args: |
+            SEMVER=${{ steps.tag.outputs.fullSemver }}
+            GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
+            ${{ inputs.extraBuildArgs }}
+
+      - name: Extract test results and build status
+        id: extract
+        uses: shrink/actions-docker-extract@v4
+        with:
+          image: build-stage:${{ steps.tag.outputs.imageTag }}
+          path: ${{ inputs.testPath }}/.
+          destination: build/artifacts/test-results
+
+      - name: Extract build status
+        uses: shrink/actions-docker-extract@v4
+        with:
+          image: build-stage:${{ steps.tag.outputs.imageTag }}
+          path: ${{ inputs.buildStatusPath }}
+          destination: build/build_status
+
+      - name: Check build status
+        run: |
+          STATUS_FILE=$(find build/build_status -type f | head -1)
+          if [ -f "$STATUS_FILE" ]; then
+            STATUS=$(cat "$STATUS_FILE")
+            if [ "${STATUS}" -ne 0 ]; then
+              echo "Build stage reported failure (exit code ${STATUS})"
+              exit "${STATUS}"
+            fi
+          fi
 
       - name: Publish Unit Test Results
         id: test-results
-        if: steps.build.outcome == 'success'
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           action_fail: true
@@ -191,22 +180,20 @@ jobs:
             build/artifacts/**/*.xml
             !build/artifacts/**/*_cov.xml
 
-      - name: Tag and push image to Amazon ECR
+      - name: Build and push release image to ECR
         id: push
         if: steps.test-results.outcome == 'success'
-        env:
-          REGISTRY: ${{ secrets.ecr-registry }}
-          REPOSITORY: ${{ inputs.imageName }}
-          IMAGE_TAG: ${{ steps.build.outputs.imageTag }}
-        run: |
-          echo REGISTRY=$REGISTRY
-          echo IMAGE_TAG=$IMAGE_TAG
-          echo REPOSITORY=$REPOSITORY
-          echo IMAGE_TAG=$IMAGE_TAG
-          
-          docker tag $REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfileDirectory }}/${{ inputs.dockerfileName }}
+          target: ${{ inputs.releaseStage }}
+          push: true
+          tags: ${{ secrets.ecr-registry }}/${{ inputs.imageName }}:${{ steps.tag.outputs.imageTag }}
+          build-args: |
+            SEMVER=${{ steps.tag.outputs.fullSemver }}
+            GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
+            ${{ inputs.extraBuildArgs }}
 
 # TODO Shortcut integration, Teams notifications
-# NOTE We want to do everything in a single job if possible because
-#        each job is a separate container and it just adds complexity
+
