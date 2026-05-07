@@ -83,15 +83,19 @@ jobs:
     name: "Build Dev"
     runs-on: ${{ inputs.runner }}
     container:
-      image: cruizba/ubuntu-dind
+      image: ubuntu:24.04
     steps:
-      - name: Install Git LFS
-        if: contains(inputs.runner, 'arc')
+      - name: Install dependencies
         run: |
           apt-get update
           apt-get install -y \
+            curl \
+            git \
             git-lfs \
-            node-semver
+            jq \
+            node-semver \
+            python3-pip
+          pip3 install --break-system-packages awscli
 
       - uses: actions/checkout@v4
         with:
@@ -135,7 +139,17 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        env:
+          ECR_REGION: ${{ inputs.ecr-region }}
+          ECR_REGISTRY: ${{ secrets.ecr-registry }}
+        run: |
+          # Write ECR credentials directly to Docker config - no Docker CLI needed.
+          ECR_TOKEN=$(aws ecr get-login-password --region "${ECR_REGION}")
+          mkdir -p ~/.docker
+          printf '{"auths":{"%s":{"auth":"%s"}}}' \
+            "${ECR_REGISTRY}" \
+            "$(printf 'AWS:%s' "${ECR_TOKEN}" | base64 -w 0)" \
+            > ~/.docker/config.json
 
       - name: Build test/build stage
         id: build-stage
