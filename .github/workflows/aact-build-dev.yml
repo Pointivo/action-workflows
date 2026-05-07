@@ -58,7 +58,7 @@ on:
       runner:
         required: false
         type: string
-        default: ops-aact-arc-general-purpose
+        default: ops-aact-arc-build
       buildkit-endpoint:
         required: false
         type: string
