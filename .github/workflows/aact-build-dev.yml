@@ -106,19 +106,71 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --global --add safe.directory /github/workspace
 
-      - name: Compute image tag
+      - name: Compute build metadata
         id: tag
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
+          RELEASE_TAG: ${{ inputs.releaseTag }}
+          IMAGE_NAME: ${{ inputs.imageName }}
+          RELEASE_STAGE_INPUT: ${{ inputs.releaseStage }}
+          EXTRA_BUILD_ARGS_RAW: ${{ inputs.extraBuildArgs }}
         run: |
-          SEMVER=$(cat "${{ inputs.semverFile }}")
+          set -euo pipefail
+
+          if [ -f ./version.sh ]; then
+            SEMVER=$(bash ./version.sh -g)
+          else
+            major=$(grep -E '^\s*version\.major\s*=' "$SEMVER_FILE" | head -1 | sed -E 's/.*=\s*//' || true)
+            minor=$(grep -E '^\s*version\.minor\s*=' "$SEMVER_FILE" | head -1 | sed -E 's/.*=\s*//' || true)
+            patch=$(grep -E '^\s*version\.patch\s*=' "$SEMVER_FILE" | head -1 | sed -E 's/.*=\s*//' || true)
+
+            if [ -n "${major}" ] && [ -n "${minor}" ] && [ -n "${patch}" ]; then
+              SEMVER="${major}.${minor}.${patch}"
+            else
+              SEMVER=$(grep -Eo '[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?' "$SEMVER_FILE" | head -1 || true)
+            fi
+          fi
+
+          [ -n "${SEMVER}" ] || { echo "Unable to determine semver from ./version.sh or ${SEMVER_FILE}"; exit 1; }
+
+          semver "${SEMVER}" >/dev/null
+
           GIT_SHA_SHORT=$(git rev-parse --short HEAD)
-          RELEASE_TAG="${{ inputs.releaseTag }}"
           IMAGE_TAG="${SEMVER}_${RELEASE_TAG}_GH${{ github.run_number }}.${GIT_SHA_SHORT}"
           FULL_SEMVER="${SEMVER}-${RELEASE_TAG}+GH${{ github.run_number }}.${GIT_SHA_SHORT}"
+          RELEASE_STAGE="${RELEASE_STAGE_INPUT:-$IMAGE_NAME}"
+
+          EXTRA_BUILD_ARGS_FILE=$(mktemp)
+          if [ -n "${EXTRA_BUILD_ARGS_RAW}" ]; then
+            eval "set -- ${EXTRA_BUILD_ARGS_RAW}"
+            while [ $# -gt 0 ]; do
+              case "$1" in
+                --build-arg)
+                  shift
+                  [ $# -gt 0 ] || { echo "Missing value after --build-arg"; exit 1; }
+                  printf '%s\n' "$1" >> "$EXTRA_BUILD_ARGS_FILE"
+                  ;;
+                --build-arg=*)
+                  printf '%s\n' "${1#--build-arg=}" >> "$EXTRA_BUILD_ARGS_FILE"
+                  ;;
+                *)
+                  printf '%s\n' "$1" >> "$EXTRA_BUILD_ARGS_FILE"
+                  ;;
+              esac
+              shift
+            done
+          fi
 
           echo "imageTag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "fullSemver=${FULL_SEMVER}" >> $GITHUB_OUTPUT
           echo "gitShaShort=${GIT_SHA_SHORT}" >> $GITHUB_OUTPUT
           echo "semver=${SEMVER}" >> $GITHUB_OUTPUT
+          echo "releaseStage=${RELEASE_STAGE}" >> $GITHUB_OUTPUT
+          {
+            echo 'extraBuildArgs<<EOF'
+            cat "$EXTRA_BUILD_ARGS_FILE"
+            echo EOF
+          } >> $GITHUB_OUTPUT
 
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "GIT_SHA_SHORT=${GIT_SHA_SHORT}" >> $GITHUB_ENV
@@ -158,27 +210,38 @@ jobs:
           context: .
           file: ${{ inputs.dockerfileDirectory }}/${{ inputs.dockerfileName }}
           target: ${{ inputs.buildStage }}
-          load: true
-          tags: build-stage:${{ steps.tag.outputs.imageTag }}
+          outputs: type=local,dest=build/build-stage-rootfs
           build-args: |
             SEMVER=${{ steps.tag.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
-            ${{ inputs.extraBuildArgs }}
+            ${{ steps.tag.outputs.extraBuildArgs }}
 
       - name: Extract test results and build status
-        id: extract
-        uses: shrink/actions-docker-extract@v4
-        with:
-          image: build-stage:${{ steps.tag.outputs.imageTag }}
-          path: ${{ inputs.testPath }}/.
-          destination: build/artifacts/test-results
+        run: |
+          set -euo pipefail
+          ROOTFS="build/build-stage-rootfs"
+          TEST_PATH="${{ inputs.testPath }}"
+          BUILD_STATUS_PATH="${{ inputs.buildStatusPath }}"
 
-      - name: Extract build status
-        uses: shrink/actions-docker-extract@v4
-        with:
-          image: build-stage:${{ steps.tag.outputs.imageTag }}
-          path: ${{ inputs.buildStatusPath }}
-          destination: build/build_status
+          case "$TEST_PATH" in
+            /*) TEST_SRC="${ROOTFS}${TEST_PATH}" ;;
+            *) TEST_SRC="${ROOTFS}/${TEST_PATH}" ;;
+          esac
+
+          case "$BUILD_STATUS_PATH" in
+            /*) BUILD_STATUS_SRC="${ROOTFS}${BUILD_STATUS_PATH}" ;;
+            *) BUILD_STATUS_SRC="${ROOTFS}/${BUILD_STATUS_PATH}" ;;
+          esac
+
+          mkdir -p build/artifacts/test-results
+          if [ -e "${TEST_SRC}" ]; then
+            cp -R "${TEST_SRC}/." build/artifacts/test-results/
+          fi
+
+          mkdir -p build/build_status
+          if [ -e "${BUILD_STATUS_SRC}" ]; then
+            cp -R "${BUILD_STATUS_SRC}" build/build_status/
+          fi
 
       - name: Check build status
         run: |
@@ -207,13 +270,13 @@ jobs:
         with:
           context: .
           file: ${{ inputs.dockerfileDirectory }}/${{ inputs.dockerfileName }}
-          target: ${{ inputs.releaseStage }}
+          target: ${{ steps.tag.outputs.releaseStage }}
           push: true
           tags: ${{ secrets.ecr-registry }}/${{ inputs.imageName }}:${{ steps.tag.outputs.imageTag }}
           build-args: |
             SEMVER=${{ steps.tag.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
-            ${{ inputs.extraBuildArgs }}
+            ${{ steps.tag.outputs.extraBuildArgs }}
 
 # TODO Shortcut integration, Teams notifications
 
