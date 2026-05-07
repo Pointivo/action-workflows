@@ -99,7 +99,17 @@ jobs:
     steps:
       - name: Start local Docker daemon
         run: |
-          dockerd --host=unix:///var/run/docker.sock --tls=false >/tmp/dockerd.log 2>&1 &
+          # Run dockerd without iptables/bridge/masq – safe in unprivileged Kubernetes pods
+          # where the node uses containerd and iptables manipulation is not permitted.
+          dockerd \
+            --host=unix:///var/run/docker.sock \
+            --tls=false \
+            --iptables=false \
+            --ip-masq=false \
+            --ip-forward=false \
+            --bridge=none \
+            --storage-driver=overlay2 \
+            >/tmp/dockerd.log 2>&1 &
 
           for i in $(seq 1 60); do
             if docker info >/dev/null 2>&1; then
