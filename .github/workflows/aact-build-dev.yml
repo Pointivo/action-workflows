@@ -215,7 +215,7 @@ jobs:
           target: ${{ inputs.buildStage }}
           outputs: type=local,dest=build/build-stage-rootfs
           cache-from: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache,mode=max
+          cache-to: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
           build-args: |
             SEMVER=${{ steps.tag.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
@@ -279,7 +279,7 @@ jobs:
           push: true
           tags: ${{ secrets.ecr-registry }}/${{ inputs.imageName }}:${{ steps.tag.outputs.imageTag }}
           cache-from: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache,mode=max
+          cache-to: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
           build-args: |
             SEMVER=${{ steps.tag.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
