@@ -263,19 +263,17 @@ jobs:
             fi
           fi
 
-      - name: Publish Unit Test Results
-        id: test-results
-        timeout-minutes: 5
-        uses: EnricoMi/publish-unit-test-result-action@v2
+      - name: Upload unit test result artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          action_fail: true
-          files: |
-            build/artifacts/**/*.xml
-            !build/artifacts/**/*_cov.xml
+          name: unit-test-results
+          path: build/artifacts/**/*.xml
+          if-no-files-found: warn
 
       - name: Build and push release image to ECR
         id: push
-        if: steps.test-results.outcome == 'success'
+        if: success()
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -289,6 +287,31 @@ jobs:
             SEMVER=${{ steps.tag.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
             ${{ steps.tag.outputs.extraBuildArgs }}
+
+  publish-test-results:
+    name: "Publish Unit Test Results"
+    runs-on: ubuntu-latest
+    needs: build-dev
+    if: needs.build-dev.result == 'success'
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Download unit test result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-results
+          path: build/artifacts
+
+      - name: Publish Unit Test Results
+        timeout-minutes: 5
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          action_fail: true
+          files: |
+            build/artifacts/**/*.xml
+            !build/artifacts/**/*_cov.xml
 
 # TODO Shortcut integration, Teams notifications
 
