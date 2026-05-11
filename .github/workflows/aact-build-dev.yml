@@ -84,6 +84,10 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ubuntu:24.04
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     defaults:
       run:
         shell: bash
@@ -261,6 +265,7 @@ jobs:
 
       - name: Publish Unit Test Results
         id: test-results
+        timeout-minutes: 5
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           action_fail: true
