@@ -77,6 +77,8 @@ on:
         required: true
       slack-webhook-url:
         required: false
+      extra-build-args:
+        required: false
 
 jobs:
   build-dev:
@@ -120,7 +122,6 @@ jobs:
           RELEASE_TAG: ${{ inputs.releaseTag }}
           IMAGE_NAME: ${{ inputs.imageName }}
           RELEASE_STAGE_INPUT: ${{ inputs.releaseStage }}
-          EXTRA_BUILD_ARGS_RAW: ${{ inputs.extraBuildArgs }}
         run: |
           set -euo pipefail
 
@@ -147,38 +148,11 @@ jobs:
           FULL_SEMVER="${SEMVER}-${RELEASE_TAG}+GH${{ github.run_number }}.${GIT_SHA_SHORT}"
           RELEASE_STAGE="${RELEASE_STAGE_INPUT:-$IMAGE_NAME}"
 
-          EXTRA_BUILD_ARGS_FILE=$(mktemp)
-          if [ -n "${EXTRA_BUILD_ARGS_RAW}" ]; then
-            eval "set -- ${EXTRA_BUILD_ARGS_RAW}"
-            while [ $# -gt 0 ]; do
-              case "$1" in
-                --build-arg)
-                  shift
-                  [ $# -gt 0 ] || { echo "Missing value after --build-arg"; exit 1; }
-                  printf '%s\n' "$1" >> "$EXTRA_BUILD_ARGS_FILE"
-                  ;;
-                --build-arg=*)
-                  printf '%s\n' "${1#--build-arg=}" >> "$EXTRA_BUILD_ARGS_FILE"
-                  ;;
-                *)
-                  printf '%s\n' "$1" >> "$EXTRA_BUILD_ARGS_FILE"
-                  ;;
-              esac
-              shift
-            done
-          fi
-
           echo "imageTag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "fullSemver=${FULL_SEMVER}" >> $GITHUB_OUTPUT
           echo "gitShaShort=${GIT_SHA_SHORT}" >> $GITHUB_OUTPUT
           echo "semver=${SEMVER}" >> $GITHUB_OUTPUT
           echo "releaseStage=${RELEASE_STAGE}" >> $GITHUB_OUTPUT
-          {
-            echo 'extraBuildArgs<<EOF'
-            cat "$EXTRA_BUILD_ARGS_FILE"
-            echo EOF
-          } >> $GITHUB_OUTPUT
-
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "GIT_SHA_SHORT=${GIT_SHA_SHORT}" >> $GITHUB_ENV
           echo "SEMVER=${SEMVER}" >> $GITHUB_ENV
@@ -223,7 +197,8 @@ jobs:
           build-args: |
             SEMVER=${{ steps.tag.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
-            ${{ steps.tag.outputs.extraBuildArgs }}
+            ${{ inputs.extraBuildArgs }}
+            ${{ secrets.extra-build-args }}
 
       - name: Extract test results and build status
         run: |
