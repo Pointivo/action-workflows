@@ -54,9 +54,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          # git-lfs and semver should already be available on the runner
-          which git-lfs >/dev/null || echo "Warning: git-lfs not found"
-          which semver >/dev/null || echo "Warning: semver (node-semver) not found"
+          sudo apt-get update
+          sudo apt-get install -y git-lfs node-semver
 
       - uses: actions/checkout@v4
         with:
