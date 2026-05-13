@@ -194,12 +194,14 @@ jobs:
 
       - name: Build test/build stage
         id: build-stage
+        timeout-minutes: 30
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ inputs.dockerfileDirectory }}/${{ inputs.dockerfileName }}
           target: ${{ inputs.buildStage }}
-          outputs: type=local,dest=build/build-stage-rootfs
+          load: true
+          tags: build-stage:${{ steps.tag.outputs.imageTag }}
           cache-from: ${{ env.CACHE_FROM }}
           cache-to: ${{ env.CACHE_TO }}
           build-args: |
@@ -211,29 +213,30 @@ jobs:
       - name: Extract test results and build status
         run: |
           set -euo pipefail
-          ROOTFS="build/build-stage-rootfs"
           TEST_PATH="${{ inputs.testPath }}"
           BUILD_STATUS_PATH="${{ inputs.buildStatusPath }}"
 
-          case "$TEST_PATH" in
-            /*) TEST_SRC="${ROOTFS}${TEST_PATH}" ;;
-            *) TEST_SRC="${ROOTFS}/${TEST_PATH}" ;;
-          esac
+          # Create container and extract files from build-stage image
+          CONTAINER_ID=$(docker create build-stage:${{ steps.tag.outputs.imageTag }})
 
-          case "$BUILD_STATUS_PATH" in
-            /*) BUILD_STATUS_SRC="${ROOTFS}${BUILD_STATUS_PATH}" ;;
-            *) BUILD_STATUS_SRC="${ROOTFS}/${BUILD_STATUS_PATH}" ;;
-          esac
-
+          # Extract test results
           mkdir -p build/artifacts/test-results
-          if [ -e "${TEST_SRC}" ]; then
-            cp -R "${TEST_SRC}/." build/artifacts/test-results/
+          if docker cp "$CONTAINER_ID:$TEST_PATH/." build/artifacts/test-results/ 2>/dev/null; then
+            echo "Extracted test results from $TEST_PATH"
+          else
+            echo "Warning: Could not extract test results from $TEST_PATH"
           fi
 
+          # Extract build status
           mkdir -p build/build_status
-          if [ -e "${BUILD_STATUS_SRC}" ]; then
-            cp -R "${BUILD_STATUS_SRC}" build/build_status/
+          if docker cp "$CONTAINER_ID:$BUILD_STATUS_PATH" build/build_status/ 2>/dev/null; then
+            echo "Extracted build status from $BUILD_STATUS_PATH"
+          else
+            echo "Warning: Could not extract build status from $BUILD_STATUS_PATH"
           fi
+
+          # Clean up container
+          docker rm "$CONTAINER_ID"
 
       - name: Check build status
         run: |
