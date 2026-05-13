@@ -24,6 +24,10 @@ on:
         required: false
         type: string
         default: ops-aact-arc-dind
+      enable-cache-dance:
+        required: false
+        type: boolean
+        default: true
 
     secrets:
       aws-account-id:
@@ -47,9 +51,7 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
-    env:
-      CACHE_FROM: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache-${{ inputs.buildStage }}
-      CACHE_TO: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache-${{ inputs.buildStage }},mode=max,image-manifest=true,oci-mediatypes=true
+      actions: write
     defaults:
       run:
         shell: bash
@@ -76,10 +78,29 @@ jobs:
           lfs: true
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v4
         with:
           driver: docker
 
+      - name: Restore BuildKit mount cache
+        if: inputs.enable-cache-dance
+        uses: actions/cache@v4
+        with:
+          path: .buildkit-cache
+          key: ${{ runner.os }}-buildkit-${{ inputs.imageName }}-${{ inputs.buildStage }}-${{ hashFiles(format('{0}/Dockerfile', inputs.dockerfileDirectory), '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/pom.xml', '**/build.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-buildkit-${{ inputs.imageName }}-${{ inputs.buildStage }}-
+            ${{ runner.os }}-buildkit-${{ inputs.imageName }}-
+
+      - name: Inject/extract BuildKit cache mounts
+        if: inputs.enable-cache-dance
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          dockerfile: ${{ inputs.dockerfileDirectory }}/Dockerfile
+          cache-dir: .buildkit-cache
+          builder: ${{ steps.buildx.outputs.name }}
+          save-always: true
 
       - name: Parse semver
         id: semver
@@ -146,23 +167,7 @@ jobs:
             "$(printf 'AWS:%s' "${ECR_TOKEN}" | base64 -w 0)" \
             > ~/.docker/config.json
 
-      - name: Cached Build Stage
-        id: buildstage
-        timeout-minutes: 60
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ inputs.dockerfileDirectory }}/Dockerfile
-          target: ${{ inputs.buildStage }}
-          cache-from: ${{ env.CACHE_FROM }}
-          cache-to: ${{ env.CACHE_TO }}
-          build-args: |
-            SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
-            GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
-            ${{ inputs.extraBuildArgs }}
-            ${{ secrets.extra-build-args }}
-
-      - name: Build Runtime and Push to ECR
+      - name: Build Image and Push to ECR
         id: push
         timeout-minutes: 60
         uses: docker/build-push-action@v6
