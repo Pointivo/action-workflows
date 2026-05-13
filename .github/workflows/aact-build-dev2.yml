@@ -47,7 +47,9 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
-    env: {}
+    env:
+      CACHE_FROM: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache-${{ inputs.buildStage }}
+      CACHE_TO: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache-${{ inputs.buildStage }},mode=max,image-manifest=true,oci-mediatypes=true
     defaults:
       run:
         shell: bash
@@ -143,6 +145,22 @@ jobs:
             "${ECR_REGISTRY}" \
             "$(printf 'AWS:%s' "${ECR_TOKEN}" | base64 -w 0)" \
             > ~/.docker/config.json
+
+      - name: Warm ECR cache for build stage
+        id: warm-buildstage-cache
+        timeout-minutes: 60
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfileDirectory }}/Dockerfile
+          target: ${{ inputs.buildStage }}
+          cache-from: ${{ env.CACHE_FROM }}
+          cache-to: ${{ env.CACHE_TO }}
+          build-args: |
+            SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
+            GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
+            ${{ inputs.extraBuildArgs }}
+            ${{ secrets.extra-build-args }}
 
       - name: Build and push release image to ECR
         id: push
