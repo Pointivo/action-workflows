@@ -123,7 +123,17 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        env:
+          ECR_REGION: us-east-1
+          ECR_REGISTRY: ${{ secrets.ecr-registry }}
+        run: |
+          # Avoid docker CLI dependency in the job container by writing auth directly.
+          ECR_TOKEN=$(aws ecr get-login-password --region "${ECR_REGION}")
+          mkdir -p ~/.docker
+          printf '{"auths":{"%s":{"auth":"%s"}}}' \
+            "${ECR_REGISTRY}" \
+            "$(printf 'AWS:%s' "${ECR_TOKEN}" | base64 -w 0)" \
+            > ~/.docker/config.json
 
       - name: Build and push release image to ECR
         id: push
@@ -142,4 +152,3 @@ jobs:
             ${{ secrets.extra-build-args }}
 
 # TODO Shortcut integration, Teams notifications
-
