@@ -1,0 +1,145 @@
+name: Reusable - AACT Build Dev
+
+on:
+  workflow_call:
+    inputs:
+      imageName:
+        required: true
+        type: string
+      semverFile:
+        required: true
+        type: string
+      buildStage:
+        required: false
+        type: string
+        default: build
+      extraBuildArgs:
+        required: false
+        type: string
+      dockerfileDirectory:
+        required: false
+        type: string
+        default: ./
+      runner:
+        required: false
+        type: string
+        default: ops-aact-arc-dind
+
+    secrets:
+      aws-account-id:
+        required: false
+      aws-access-key-id:
+        required: true
+      aws-secret-access-key:
+        required: true
+      ecr-registry:
+        required: true
+      github-token:
+        required: true
+      extra-build-args:
+        required: false
+
+jobs:
+  build-dev:
+    name: "Build Dev"
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ubuntu:24.04
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    env: {}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            curl \
+            git \
+            git-lfs \
+            jq \
+            node-semver \
+            python3-pip
+          pip3 install --break-system-packages awscli
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Trust workspace for git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory /github/workspace
+
+      - name: Compute build metadata
+        id: tag
+        env:
+          SEMVER_FILE: ${{ inputs.semverFile }}
+          IMAGE_NAME: ${{ inputs.imageName }}
+        run: |
+          set -euo pipefail
+
+          if [ -f ./version.sh ]; then
+            SEMVER=$(bash ./version.sh -g)
+          else
+            major=$(grep -E '^\s*version\.major\s*=' "$SEMVER_FILE" | head -1 | sed -E 's/.*=\s*//' || true)
+            minor=$(grep -E '^\s*version\.minor\s*=' "$SEMVER_FILE" | head -1 | sed -E 's/.*=\s*//' || true)
+            patch=$(grep -E '^\s*version\.patch\s*=' "$SEMVER_FILE" | head -1 | sed -E 's/.*=\s*//' || true)
+
+            if [ -n "${major}" ] && [ -n "${minor}" ] && [ -n "${patch}" ]; then
+              SEMVER="${major}.${minor}.${patch}"
+            else
+              SEMVER=$(grep -Eo '[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?' "$SEMVER_FILE" | head -1 || true)
+            fi
+          fi
+
+          [ -n "${SEMVER}" ] || { echo "Unable to determine semver from ./version.sh or ${SEMVER_FILE}"; exit 1; }
+
+          semver "${SEMVER}" >/dev/null
+
+          GIT_SHA_SHORT=$(git rev-parse --short HEAD)
+          IMAGE_TAG="${SEMVER}_snapshot_GH${{ github.run_number }}.${GIT_SHA_SHORT}"
+          FULL_SEMVER="${SEMVER}-snapshot+GH${{ github.run_number }}.${GIT_SHA_SHORT}"
+
+          echo "imageTag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "fullSemver=${FULL_SEMVER}" >> $GITHUB_OUTPUT
+          echo "gitShaShort=${GIT_SHA_SHORT}" >> $GITHUB_OUTPUT
+          echo "semver=${SEMVER}" >> $GITHUB_OUTPUT
+          echo "releaseStage=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "GIT_SHA_SHORT=${GIT_SHA_SHORT}" >> $GITHUB_ENV
+           echo "SEMVER=${SEMVER}" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push release image to ECR
+        id: push
+        timeout-minutes: 60
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfileDirectory }}/Dockerfile
+          target: ${{ inputs.imageName }}
+          push: true
+          tags: ${{ secrets.ecr-registry }}/${{ inputs.imageName }}:${{ steps.tag.outputs.imageTag }}
+          build-args: |
+            SEMVER=${{ steps.tag.outputs.fullSemver }}
+            GIT_SHA_SHORT=${{ steps.tag.outputs.gitShaShort }}
+            ${{ inputs.extraBuildArgs }}
+            ${{ secrets.extra-build-args }}
+
+# TODO Shortcut integration, Teams notifications
+
