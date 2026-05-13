@@ -251,7 +251,7 @@ jobs:
 
 
       - name: Publish Unit Test Results
-        if: always()
+        if: (!cancelled())
         continue-on-error: true
         timeout-minutes: 5
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -263,7 +263,7 @@ jobs:
 
       - name: Build and push release image to ECR
         id: push
-        if: success()
+        if: (success() && !cancelled())
         uses: docker/build-push-action@v6
         with:
           context: .
