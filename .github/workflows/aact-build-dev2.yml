@@ -146,8 +146,8 @@ jobs:
             "$(printf 'AWS:%s' "${ECR_TOKEN}" | base64 -w 0)" \
             > ~/.docker/config.json
 
-      - name: Warm ECR cache for build stage
-        id: warm-buildstage-cache
+      - name: Cached Build Stage
+        id: buildstage
         timeout-minutes: 60
         uses: docker/build-push-action@v6
         with:
@@ -162,7 +162,7 @@ jobs:
             ${{ inputs.extraBuildArgs }}
             ${{ secrets.extra-build-args }}
 
-      - name: Build and push release image to ECR
+      - name: Build Runtime and Push to ECR
         id: push
         timeout-minutes: 60
         uses: docker/build-push-action@v6
