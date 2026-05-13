@@ -50,6 +50,11 @@ jobs:
     env:
       CACHE_FROM: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache-${{ inputs.buildStage }}
       CACHE_TO: type=registry,ref=${{ secrets.ecr-registry }}/${{ inputs.imageName }}:buildcache-${{ inputs.buildStage }},mode=max,image-manifest=true,oci-mediatypes=true
+      BUILD_ARGS: |
+          SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
+          GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
+          ${{ inputs.extraBuildArgs }}
+          ${{ secrets.extra-build-args }}
     defaults:
       run:
         shell: bash
