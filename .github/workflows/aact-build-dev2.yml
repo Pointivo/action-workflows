@@ -130,6 +130,11 @@ jobs:
           tags: |
             type=raw,value=${{ steps.semver.outputs.semver }}_snapshot_GH${{ github.run_number }}.${{ steps.buildmeta.outputs.gitShaShort }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Build Image and Push to ECR
         id: push
         timeout-minutes: 60
