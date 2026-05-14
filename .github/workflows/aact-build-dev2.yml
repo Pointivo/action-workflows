@@ -64,7 +64,8 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v4
         with:
-          driver: docker
+          driver: remote
+          endpoint: ${{ env.BUILDKIT_ENDPOINT || 'unix:///run/buildkit/buildkitd.sock' }}
 
       - name: Restore BuildKit mount cache
         if: inputs.enable-cache-dance
@@ -134,6 +135,21 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build build stage (warm cache mounts)
+        if: inputs.enable-cache-dance
+        timeout-minutes: 60
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfileDirectory }}/Dockerfile
+          target: ${{ inputs.buildStage }}
+          push: false
+          build-args: |
+            SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
+            GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
+            ${{ inputs.extraBuildArgs }}
+            ${{ secrets.extra-build-args }}
 
       - name: Build Image and Push to ECR
         id: push
