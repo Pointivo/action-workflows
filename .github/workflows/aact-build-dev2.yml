@@ -40,7 +40,7 @@ on:
         required: true
       github-token:
         required: true
-      extra-build-args:
+      docker-secrets:
         required: false
 
 jobs:
@@ -148,7 +148,7 @@ jobs:
             SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
             ${{ inputs.extraBuildArgs }}
-            ${{ secrets.extra-build-args }}
+          secrets: ${{ secrets.docker-secrets }}
 
       - name: Build Image and Push to ECR
         id: push
@@ -165,4 +165,4 @@ jobs:
             SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
             ${{ inputs.extraBuildArgs }}
-            ${{ secrets.extra-build-args }}
+          secrets: ${{ secrets.docker-secrets }}
