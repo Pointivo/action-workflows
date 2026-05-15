@@ -36,6 +36,14 @@ on:
         required: false
         type: string
         default: ""
+      checkout-ref:
+        required: false
+        type: string
+        default: ""
+      checkout-depth:
+        required: false
+        type: number
+        default: 1
 
     secrets:
       aws-account-id:
@@ -67,6 +75,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+          ref: ${{ inputs.checkout-ref || github.ref }}
+          fetch-depth: ${{ inputs.checkout-depth }}
 
       - name: Set up Docker Buildx
         id: buildx
