@@ -98,6 +98,25 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           save-always: true
 
+      - name: Cache diagnostics (post-inject)
+        if: inputs.enable-cache-dance
+        run: |
+          set -euo pipefail
+          echo "Inspecting .buildkit-cache for pnpm-related entries after injection"
+          if [ -d .buildkit-cache ]; then
+            du -sh .buildkit-cache || true
+            find .buildkit-cache -maxdepth 3 -type d | sed 's#^#dir: #' | head -200
+            PNPM_PATHS=$(find .buildkit-cache -type d \( -iname '*pnpm*' -o -iname '*store*' \) | head -50 || true)
+            if [ -n "${PNPM_PATHS}" ]; then
+              echo "pnpm-ish dirs found:"
+              echo "${PNPM_PATHS}"
+            else
+              echo "No pnpm-ish dirs found in .buildkit-cache after injection"
+            fi
+          else
+            echo ".buildkit-cache directory missing after injection"
+          fi
+
       - name: Parse semver
         id: semver
         env:
@@ -162,6 +181,20 @@ jobs:
             GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
             ${{ inputs.extraBuildArgs }}
           secrets: ${{ secrets.docker-secrets }}
+
+      - name: Cache diagnostics (post-warmup)
+        if: inputs.enable-cache-dance
+        run: |
+          set -euo pipefail
+          echo "Inspecting .buildkit-cache after warm-up build"
+          if [ -d .buildkit-cache ]; then
+            du -sh .buildkit-cache || true
+            find .buildkit-cache -type f | wc -l | xargs echo "cached files:"
+            PNPM_FILE_COUNT=$(find .buildkit-cache -type f \( -iname '*pnpm*' -o -path '*/store/*' \) | wc -l | tr -d ' ')
+            echo "pnpm-ish file count: ${PNPM_FILE_COUNT}"
+          else
+            echo ".buildkit-cache directory missing after warm-up"
+          fi
 
       - name: Build Image and Push to ECR
         id: push
