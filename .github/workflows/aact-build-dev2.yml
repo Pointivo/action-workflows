@@ -3,20 +3,20 @@ name: Reusable - AACT Build Dev
 on:
   workflow_call:
     inputs:
-      imageName:
+      image-name:
         required: true
         type: string
-      semverFile:
+      semver-file:
         required: true
         type: string
-      buildStage:
+      build-stage:
         required: false
         type: string
         default: build
-      extraBuildArgs:
+      extra-build-args:
         required: false
         type: string
-      dockerfileDirectory:
+      dockerfile-directory:
         required: false
         type: string
         default: ./
@@ -76,28 +76,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .buildkit-cache
-          key: ${{ runner.os }}-buildkit-${{ inputs.imageName }}-${{ inputs.buildStage }}-${{ hashFiles(format('{0}/Dockerfile', inputs.dockerfileDirectory), '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/pom.xml', '**/build.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-buildkit-${{ inputs.image-name }}-${{ inputs.build-stage }}-${{ hashFiles(format('{0}/Dockerfile', inputs.dockerfile-directory), '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/pom.xml', '**/build.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
-            ${{ runner.os }}-buildkit-${{ inputs.imageName }}-${{ inputs.buildStage }}-
-            ${{ runner.os }}-buildkit-${{ inputs.imageName }}-
-
-      - name: Cache diagnostics (pre-build)
-        if: inputs.enable-cache-dance
-        run: |
-          set -euo pipefail
-          echo "buildkit cache hit: ${{ steps.buildkit_cache.outputs.cache-hit }}"
-          if [ -d .buildkit-cache ]; then
-            du -sh .buildkit-cache || true
-            find .buildkit-cache -type f | wc -l | xargs echo "cached files:"
-          else
-            echo ".buildkit-cache directory missing"
-          fi
+            ${{ runner.os }}-buildkit-${{ inputs.image-name }}-${{ inputs.build-stage }}-
+            ${{ runner.os }}-buildkit-${{ inputs.image-name }}-
 
       - name: Inject/extract BuildKit cache mounts (auto-discovery)
         if: inputs.enable-cache-dance && inputs.cache-map-json == ''
         uses: reproducible-containers/buildkit-cache-dance@v3
         with:
-          dockerfile: ${{ inputs.dockerfileDirectory }}/Dockerfile
+          dockerfile: ${{ inputs.dockerfile-directory }}/Dockerfile
           cache-dir: .buildkit-cache
           builder: ${{ steps.buildx.outputs.name }}
           save-always: true
@@ -110,29 +98,10 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           save-always: true
 
-      - name: Cache diagnostics (post-inject)
-        if: inputs.enable-cache-dance
-        run: |
-          set -euo pipefail
-          echo "Inspecting .buildkit-cache for pnpm-related entries after injection"
-          if [ -d .buildkit-cache ]; then
-            du -sh .buildkit-cache || true
-            find .buildkit-cache -maxdepth 3 -type d | sed 's#^#dir: #' | head -200
-            PNPM_PATHS=$(find .buildkit-cache -type d \( -iname '*pnpm*' -o -iname '*store*' \) | head -50 || true)
-            if [ -n "${PNPM_PATHS}" ]; then
-              echo "pnpm-ish dirs found:"
-              echo "${PNPM_PATHS}"
-            else
-              echo "No pnpm-ish dirs found in .buildkit-cache after injection"
-            fi
-          else
-            echo ".buildkit-cache directory missing after injection"
-          fi
-
       - name: Parse semver
         id: semver
         env:
-          SEMVER_FILE: ${{ inputs.semverFile }}
+          SEMVER_FILE: ${{ inputs.semver-file }}
         run: |
           set -euo pipefail
 
@@ -170,7 +139,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.ecr-registry }}/${{ inputs.imageName }}
+          images: ${{ secrets.ecr-registry }}/${{ inputs.image-name }}
           tags: |
             type=raw,value=${{ steps.semver.outputs.semver }}_snapshot_GH${{ github.run_number }}.${{ steps.buildmeta.outputs.gitShaShort }}
 
@@ -185,28 +154,14 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ inputs.dockerfileDirectory }}/Dockerfile
-          target: ${{ inputs.buildStage }}
+          file: ${{ inputs.dockerfile-directory }}/Dockerfile
+          target: ${{ inputs.build-stage }}
           push: false
           build-args: |
             SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
-            ${{ inputs.extraBuildArgs }}
+            ${{ inputs.extra-build-args }}
           secrets: ${{ secrets.docker-secrets }}
-
-      - name: Cache diagnostics (post-warmup)
-        if: inputs.enable-cache-dance
-        run: |
-          set -euo pipefail
-          echo "Inspecting .buildkit-cache after warm-up build"
-          if [ -d .buildkit-cache ]; then
-            du -sh .buildkit-cache || true
-            find .buildkit-cache -type f | wc -l | xargs echo "cached files:"
-            PNPM_FILE_COUNT=$(find .buildkit-cache -type f \( -iname '*pnpm*' -o -path '*/store/*' \) | wc -l | tr -d ' ')
-            echo "pnpm-ish file count: ${PNPM_FILE_COUNT}"
-          else
-            echo ".buildkit-cache directory missing after warm-up"
-          fi
 
       - name: Build Image and Push to ECR
         id: push
@@ -214,13 +169,13 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ inputs.dockerfileDirectory }}/Dockerfile
-          target: ${{ inputs.imageName }}
+          file: ${{ inputs.dockerfile-directory }}/Dockerfile
+          target: ${{ inputs.image-name }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
-            ${{ inputs.extraBuildArgs }}
+            ${{ inputs.extra-build-args }}
           secrets: ${{ secrets.docker-secrets }}
