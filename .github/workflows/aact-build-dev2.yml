@@ -158,6 +158,8 @@ jobs:
           target: ${{ inputs.build-stage }}
           push: false
           build-args: |
+            CI=true
+            GITHUB_ACTIONS=true
             SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
             ${{ inputs.extra-build-args }}
@@ -175,7 +177,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
+            CI=true
+            GITHUB_ACTIONS=true
             SEMVER=${{ steps.buildmeta.outputs.fullSemver }}
             GIT_SHA_SHORT=${{ steps.buildmeta.outputs.gitShaShort }}
             ${{ inputs.extra-build-args }}
           secrets: ${{ secrets.docker-secrets }}
+
