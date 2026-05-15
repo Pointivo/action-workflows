@@ -3,6 +3,10 @@ name: Reusable - AACT Build Dev
 on:
   workflow_call:
     inputs:
+      push:
+        required: false
+        type: boolean
+        default: true
       image-name:
         required: true
         type: string
@@ -173,7 +177,7 @@ jobs:
           context: .
           file: ${{ inputs.dockerfile-directory }}/Dockerfile
           target: ${{ inputs.image-name }}
-          push: true
+          push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
