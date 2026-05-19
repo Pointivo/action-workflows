@@ -211,7 +211,7 @@ jobs:
   build-shortcut-inputs:
     name: "Build inputs to Shortcut Commenter"
     needs: [ build-dev ]
-    if: inputs.enable-shortcut-comment && inputs.push && secrets.shortcut-api-token != '' && contains(github.event.head_commit.message || '', 'sc-') && !contains(github.event.head_commit.message || '', '"')
+    if: inputs.enable-shortcut-comment && inputs.push && contains(github.event.head_commit.message || '', 'sc-') && !contains(github.event.head_commit.message || '', '"')
     runs-on: ${{ inputs.runner }}
     env:
       MESSAGE: ${{ github.event.head_commit.message || '' }}
