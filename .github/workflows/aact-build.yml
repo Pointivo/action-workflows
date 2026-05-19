@@ -76,7 +76,7 @@ jobs:
       checks: write
       pull-requests: write
       actions: write
-      id-token: write
+
     defaults:
       run:
         shell: bash
@@ -101,15 +101,15 @@ jobs:
       - name: Restore BuildKit mount cache
         id: buildkit_cache
         if: inputs.enable-cache-dance
-        uses: SonarSource/gh-action_cache@v1
+        uses: runs-on/cache@v4
         with:
           path: .buildkit-cache
           key: ${{ runner.os }}-buildkit-${{ inputs.image-name }}-${{ inputs.build-stage }}-${{ hashFiles(format('{0}/Dockerfile', inputs.dockerfile-directory), '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/pom.xml', '**/build.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-buildkit-${{ inputs.image-name }}-${{ inputs.build-stage }}-
             ${{ runner.os }}-buildkit-${{ inputs.image-name }}-
-          backend: s3
-          environment: dev
+        env:
+          RUNS_ON_S3_BUCKET_CACHE: pointivo-infrastructure
 
       - name: Inject/extract BuildKit cache mounts (auto-discovery)
         if: inputs.enable-cache-dance && inputs.cache-map-json == ''
