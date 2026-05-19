@@ -76,15 +76,15 @@ jobs:
       checks: write
       pull-requests: write
       actions: write
+      id-token: write
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
         with:
-          lfs: true
-          ref: ${{ inputs.checkout-ref || github.ref }}
-          fetch-depth: ${{ inputs.enable-shortcut-comment && 2 || inputs.checkout-depth }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Docker Buildx
         id: buildx
@@ -92,16 +92,24 @@ jobs:
         with:
           driver: docker-container
 
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+          ref: ${{ inputs.checkout-ref || github.ref }}
+          fetch-depth: ${{ inputs.enable-shortcut-comment && 0 || inputs.checkout-depth }}
+
       - name: Restore BuildKit mount cache
         id: buildkit_cache
         if: inputs.enable-cache-dance
-        uses: actions/cache@v4
+        uses: SonarSource/gh-action_cache@v1
         with:
           path: .buildkit-cache
           key: ${{ runner.os }}-buildkit-${{ inputs.image-name }}-${{ inputs.build-stage }}-${{ hashFiles(format('{0}/Dockerfile', inputs.dockerfile-directory), '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/pom.xml', '**/build.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-buildkit-${{ inputs.image-name }}-${{ inputs.build-stage }}-
             ${{ runner.os }}-buildkit-${{ inputs.image-name }}-
+          backend: s3
+          environment: dev
 
       - name: Inject/extract BuildKit cache mounts (auto-discovery)
         if: inputs.enable-cache-dance && inputs.cache-map-json == ''
@@ -164,11 +172,6 @@ jobs:
           images: ${{ secrets.ecr-registry }}/${{ inputs.image-name }}
           tags: |
             type=raw,value=${{ steps.buildmeta.outputs.imageTag }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-region: ${{ env.AWS_REGION }}
 
       - name: Build & Test
         if: inputs.enable-cache-dance
