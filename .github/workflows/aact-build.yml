@@ -167,7 +167,7 @@ jobs:
           tags: |
             type=raw,value=${{ steps.buildmeta.outputs.imageTag }}
 
-      - name: Build & Test
+      - name: Build (with cache dance)
         if: inputs.enable-cache-dance
         timeout-minutes: 60
         uses: docker/build-push-action@v6
@@ -184,7 +184,7 @@ jobs:
             ${{ inputs.extra-build-args }}
           secrets: ${{ secrets.docker-secrets }}
 
-      - name: Package & Push
+      - name: Build & Push
         id: push
         timeout-minutes: 60
         uses: docker/build-push-action@v6
