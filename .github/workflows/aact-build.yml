@@ -161,7 +161,7 @@ jobs:
 
       - name: Generate Docker image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.ecr-registry }}/${{ inputs.image-name }}
           tags: |
@@ -170,7 +170,10 @@ jobs:
       - name: Build (with cache dance)
         if: inputs.enable-cache-dance
         timeout-minutes: 60
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           file: ${{ inputs.dockerfile-directory }}/Dockerfile
@@ -187,7 +190,10 @@ jobs:
       - name: Build & Push
         id: push
         timeout-minutes: 60
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           file: ${{ inputs.dockerfile-directory }}/Dockerfile
