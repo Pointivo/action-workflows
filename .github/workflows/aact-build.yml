@@ -125,6 +125,8 @@ jobs:
         with:
           cache-map: ${{ inputs.cache-map-json }}
           builder: ${{ steps.buildx.outputs.name }}
+          dockerfile: ${{ inputs.dockerfile-directory }}/Dockerfile
+          skip-extraction:  ${{ steps.buildkit_cache.outputs.cache-hit }}
 
       - name: Parse semver
         id: semver
