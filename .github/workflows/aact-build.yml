@@ -101,7 +101,7 @@ jobs:
       - name: Restore BuildKit mount cache
         id: buildkit_cache
         if: inputs.enable-cache-dance
-        uses: runs-on/cache@v4
+        uses: step-security/runs-on-cache@v4
         with:
           path: .buildkit-cache
           key: ${{ runner.os }}-buildkit-${{ inputs.image-name }}-${{ inputs.build-stage }}-${{ hashFiles(format('{0}/Dockerfile', inputs.dockerfile-directory), '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/pom.xml', '**/build.gradle*', '**/gradle-wrapper.properties') }}
