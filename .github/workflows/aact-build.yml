@@ -84,7 +84,7 @@ jobs:
         with:
           lfs: true
           ref: ${{ inputs.checkout-ref || github.ref }}
-          fetch-depth: ${{ inputs.checkout-depth }}
+          fetch-depth: ${{ inputs.enable-shortcut-comment && 0 || inputs.checkout-depth }}
 
       - name: Set up Docker Buildx
         id: buildx
