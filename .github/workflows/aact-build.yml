@@ -31,7 +31,7 @@ on:
       enable-cache-dance:
         required: false
         type: boolean
-        default: true
+        default: false
       enable-shortcut-comment:
         required: false
         type: boolean
@@ -50,15 +50,7 @@ on:
         default: 1
 
     secrets:
-      aws-account-id:
-        required: false
-      aws-access-key-id:
-        required: true
-      aws-secret-access-key:
-        required: true
       ecr-registry:
-        required: true
-      github-token:
         required: true
       docker-secrets:
         required: false
