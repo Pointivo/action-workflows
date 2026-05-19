@@ -13,13 +13,17 @@ on:
         type: string
         # ops@pointivo.com
         default: 67917173-e45e-4632-a07f-a1f3e7116878
+      runner:
+        required: false
+        type: string
+        default: ops-aact-arc-dind
     secrets:
       shortcut-api-token:
         required: true
 jobs:
   shortcut-comment:
     name: "Shortcut Comment"
-    runs-on: [ self-hosted, ops-pv ]
+    runs-on: ${{ inputs.runner }}
     steps:
       - run: |
           normalized_story_id=$(echo "${{ inputs.storyId }}" | sed 's/\(sc-\)\?\([0-9]\+\)/\2/g' )

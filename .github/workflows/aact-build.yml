@@ -1,4 +1,3 @@
-
 name: Reusable - AACT Build Dev
 
 on:
@@ -33,6 +32,10 @@ on:
         required: false
         type: boolean
         default: true
+      enable-shortcut-comment:
+        required: false
+        type: boolean
+        default: false
       cache-map-json:
         required: false
         type: string
@@ -59,10 +62,14 @@ on:
         required: true
       docker-secrets:
         required: false
+      shortcut-api-token:
+        required: false
 
 jobs:
   build-dev:
     name: "Build Dev"
+    outputs:
+      image-tag: ${{ steps.buildmeta.outputs.imageTag }}
     runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
@@ -146,9 +153,11 @@ jobs:
           set -euo pipefail
           GIT_SHA_SHORT=$(git rev-parse --short HEAD)
           FULL_SEMVER="${SEMVER}-snapshot+GH${{ github.run_number }}.${GIT_SHA_SHORT}"
+          IMAGE_TAG="${SEMVER}_snapshot_GH${{ github.run_number }}.${GIT_SHA_SHORT}"
 
           echo "gitShaShort=${GIT_SHA_SHORT}" >> "$GITHUB_OUTPUT"
           echo "fullSemver=${FULL_SEMVER}" >> "$GITHUB_OUTPUT"
+          echo "imageTag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Generate Docker image metadata
         id: meta
@@ -156,14 +165,14 @@ jobs:
         with:
           images: ${{ secrets.ecr-registry }}/${{ inputs.image-name }}
           tags: |
-            type=raw,value=${{ steps.semver.outputs.semver }}_snapshot_GH${{ github.run_number }}.${{ steps.buildmeta.outputs.gitShaShort }}
+            type=raw,value=${{ steps.buildmeta.outputs.imageTag }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Build build stage (warm cache mounts)
+      - name: Build & Test
         if: inputs.enable-cache-dance
         timeout-minutes: 60
         uses: docker/build-push-action@v6
@@ -180,7 +189,7 @@ jobs:
             ${{ inputs.extra-build-args }}
           secrets: ${{ secrets.docker-secrets }}
 
-      - name: Build Image and Push to ECR
+      - name: Package & Push
         id: push
         timeout-minutes: 60
         uses: docker/build-push-action@v6
@@ -199,3 +208,43 @@ jobs:
             ${{ inputs.extra-build-args }}
           secrets: ${{ secrets.docker-secrets }}
 
+  build-shortcut-inputs:
+    name: "Build inputs to Shortcut Commenter"
+    needs: [ build-dev ]
+    if: inputs.enable-shortcut-comment && inputs.push && secrets.shortcut-api-token != '' && contains(github.event.head_commit.message || '', 'sc-') && !contains(github.event.head_commit.message || '', '"')
+    runs-on: ${{ inputs.runner }}
+    env:
+      MESSAGE: ${{ github.event.head_commit.message || '' }}
+    outputs:
+      STORY_ID: ${{ steps.parse.outputs.STORY_ID }}
+      COMMENT: ${{ steps.build-comment.outputs.COMMENT }}
+    steps:
+      - id: parse
+        run: |
+          set -euo pipefail
+          story_id=$(echo "${MESSAGE}" | head -n 1 | grep -i 'sc-[0-9]\+' | sed 's/.*[Ss][Cc]-\([0-9]\+\).*/\1/g')
+          if [[ -n "${story_id}" ]]; then
+            echo "STORY_ID=${story_id}" >> "$GITHUB_OUTPUT"
+          else
+            echo "No Shortcut story could be parsed from ${MESSAGE}" 1>&2
+            exit 1
+          fi
+      - id: build-comment
+        run: |
+          set -euo pipefail
+          num=$(echo "${{ needs.build-dev.outputs.image-tag }}" | sed 's/.*GH\([0-9]\+\)\..*/\1/g')
+          href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          comment="Included in master build [#${num}](${href})\nVersion: \`${{ inputs.image-name }}:${{ needs.build-dev.outputs.image-tag }}\`"
+          echo "COMMENT=${comment}" >> "$GITHUB_OUTPUT"
+
+  commit-comment:
+    name: "Add Comment to Shortcut Story"
+    needs: [ build-shortcut-inputs ]
+    if: inputs.enable-shortcut-comment && needs.build-shortcut-inputs.result == 'success'
+    uses: ./.github/workflows/shortcut-comment.yml
+    with:
+      storyId: ${{ needs.build-shortcut-inputs.outputs.STORY_ID }}
+      comment: ${{ needs.build-shortcut-inputs.outputs.COMMENT }}
+      runner: ${{ inputs.runner }}
+    secrets:
+      shortcut-api-token: ${{ secrets.shortcut-api-token }}
