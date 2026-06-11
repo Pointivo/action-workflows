@@ -27,7 +27,7 @@ on:
       runner:
         required: false
         type: string
-        default: ops-aact-arc-dind
+        default: aws-aact-arc-dind
       enable-cache-dance:
         required: false
         type: boolean
